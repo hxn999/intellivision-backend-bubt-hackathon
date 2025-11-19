@@ -89,7 +89,7 @@ const FoodItemSchema: Schema<IFoodItem> = new Schema(
     allergens: { type: [String], default: [] },
 
     source: { type: String, required: true, default: "User_Submission" },
-    is_verified: { type: Boolean, required: true, default: false },
+    // is_verified: { type: Boolean, required: true, default: false },
 
     created_by: {
       type: Schema.Types.ObjectId,

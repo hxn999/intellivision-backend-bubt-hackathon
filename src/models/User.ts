@@ -93,7 +93,7 @@ const HealthProfileSchema = new Schema<IUserHealthProfile>(
     },
     height_cm: { type: Number, required: true },
     current_weight_kg: { type: Number, required: true },
-
+    
     body_fat_percentage: { type: Number },
     waist_circumference_cm: { type: Number },
     hip_circumference_cm: { type: Number },

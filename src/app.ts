@@ -1,8 +1,9 @@
 import express, { Application, Request, Response } from "express";
 import cookieParser from "cookie-parser";
-import exampleRouter from "./routes/exampleRouter";
 import authRouter from "./routes/authRouter";
 import userRouter from "./routes/userRouter";
+import foodItemRouter from "./routes/foodItemRouter";
+import inventoryRouter from "./routes/inventoryRouter";
 
 const app: Application = express();
 
@@ -16,8 +17,9 @@ app.get("/health", (_req: Request, res: Response) => {
 });
 
 // API routes
-app.use("/api/example", exampleRouter);
 app.use("/auth", authRouter);
 app.use("/user", userRouter);
+app.use("/food-items", foodItemRouter);
+app.use("/inventories", inventoryRouter);
 
 export default app;
