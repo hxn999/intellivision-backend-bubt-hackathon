@@ -2,6 +2,7 @@ import express, { Application, Request, Response } from "express";
 import cookieParser from "cookie-parser";
 import exampleRouter from "./routes/exampleRouter";
 import authRouter from "./routes/authRouter";
+import userRouter from "./routes/userRouter";
 
 const app: Application = express();
 
@@ -17,5 +18,6 @@ app.get("/health", (_req: Request, res: Response) => {
 // API routes
 app.use("/api/example", exampleRouter);
 app.use("/auth", authRouter);
+app.use("/user", userRouter);
 
 export default app;

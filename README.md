@@ -51,7 +51,7 @@ This is an Express + TypeScript backend with MongoDB/Mongoose, JWT auth, and Zod
 
 - **Base URL**
   - In development: `http://localhost:3000`
-  - Auth routes are mounted at `/auth`, API routes can use `/api/...`.
+  - Auth routes are mounted at `/auth`, user routes at `/user`, other APIs can use `/api/...`.
 
 #### Health
 
@@ -104,6 +104,101 @@ This is an Express + TypeScript backend with MongoDB/Mongoose, JWT auth, and Zod
   - **Response**:
     - `200` with `{ "message": "Access token refreshed" }`.
     - `401` if refresh token is missing/invalid/expired.
+
+#### User (protected – requires `access_token` cookie)
+
+- **PUT** `/user/health-profile`
+  - **Auth**: Requires valid `access_token` cookie.
+  - **Body**:
+    - `birth_date` (date/string, required)
+    - `gender` (`"male"` | `"female"`, required)
+    - `height_cm` (number, > 0)
+    - `current_weight_kg` (number, > 0)
+    - Optional body-composition & biomarker fields:
+      - `body_fat_percentage`, `waist_circumference_cm`, `hip_circumference_cm`, `neck_circumference_cm`
+      - `activity_level_factor`, `steps_daily_average`, `sleep_hours_average`
+      - `blood_glucose_fasting`, `hba1c`, `blood_pressure_systolic`, `blood_pressure_diastolic`, `cholesterol_ldl`, `cholesterol_hdl`
+  - **Behavior**: Overwrites the authenticated user's `healthProfile` with the provided data.
+  - **Response**: `200` with `{ user: { id, fullName, email, healthProfile } }`.
+
+- **PATCH** `/user/profile`
+  - **Auth**: Requires valid `access_token` cookie.
+  - **Body** (at least one of `fullName` or `newPassword`):
+    - `fullName` (string, min 2, optional)
+    - `currentPassword` (string, min 6, required if `newPassword` is present)
+    - `newPassword` (string, min 6, optional)
+  - **Behavior**:
+    - Updates `fullName` if provided.
+    - If `newPassword` is provided, verifies `currentPassword` and updates the password hash.
+  - **Response**: `200` with `{ user: { id, fullName, email } }`.
+
+- **POST** `/user/food-logs`
+  - **Auth**: Requires valid `access_token` cookie.
+  - **Body**:
+    - `date` (date/string)
+    - `time` (string, e.g. `"08:30"`)
+    - `foodItemId` (string, existing `FoodItem` ObjectId)
+    - `quantity` (number, > 0)
+  - **Behavior**: Appends a new food log entry to the authenticated user's `foodLogs` array.
+  - **Response**: `201` with `{ foodLogs: [...] }`.
+
+- **DELETE** `/user/food-logs/:index`
+  - **Auth**: Requires valid `access_token` cookie.
+  - **Params**:
+    - `index` (0-based index into the `foodLogs` array)
+  - **Behavior**: Removes the specified log entry.
+  - **Response**:
+    - `200` with `{ deleted, foodLogs }`.
+    - `404` if the index is out of range.
+
+- **GET** `/user/goals`
+  - **Auth**: Requires valid `access_token` cookie.
+  - **Behavior**: Returns all goals for the authenticated user and the current goal index.
+  - **Response**: `200` with `{ goals: [...], current_goal_index }` (null if none).
+
+- **POST** `/user/goals`
+  - **Auth**: Requires valid `access_token` cookie.
+  - **Body**:
+    - `primary_goals`: array of allowed values:  
+      `["weight_loss","muscle_gain","maintenance","recomposition","improve_endurance","improve_health"]`
+    - `secondary_goals` (optional array):  
+      `["better_sleep","more_energy","improve_mood","improve_markers","build_habits"]`
+    - `allergies` (optional array of strings)
+    - `activity_level`: one of  
+      `["sedentary","lightly_active","moderately_active","very_active","extra_active"]`
+    - `target_weight_kg` (number, > 0)
+    - `current_weight_kg` (number, > 0)
+  - **Behavior**: Adds a new goal to `user.goals`. If it is the first goal, sets it as current.
+  - **Response**: `201` with `{ goals, current_goal_index }`.
+
+- **PATCH** `/user/goals/:index`
+  - **Auth**: Requires valid `access_token` cookie.
+  - **Params**:
+    - `index` (0-based index into the `goals` array)
+  - **Body** (all optional; same allowed values as create):
+    - `primary_goals`, `secondary_goals`, `allergies`, `activity_level`, `target_weight_kg`, `current_weight_kg`
+  - **Behavior**: Partially updates the specified goal.
+  - **Response**:
+    - `200` with `{ goals, current_goal_index }`.
+    - `404` if the goal index is invalid.
+
+- **DELETE** `/user/goals/:index`
+  - **Auth**: Requires valid `access_token` cookie.
+  - **Params**:
+    - `index` (0-based index into the `goals` array)
+  - **Behavior**: Removes the goal and re-adjusts `current_goal_index` if needed.
+  - **Response**:
+    - `200` with `{ goals, current_goal_index }`.
+    - `404` if the goal index is invalid.
+
+- **PATCH** `/user/goals/current`
+  - **Auth**: Requires valid `access_token` cookie.
+  - **Body**:
+    - `index` (number, >= 0) – the index in `goals` to mark as current.
+  - **Behavior**: Sets `current_goal_index` to the given index.
+  - **Response**:
+    - `200` with `{ goals, current_goal_index }`.
+    - `404` if the index is out of range.
 
 ### Using the API (client notes)
 
