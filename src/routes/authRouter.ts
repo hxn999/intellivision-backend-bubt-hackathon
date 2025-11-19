@@ -1,16 +1,26 @@
 import { Router } from "express";
-import { login, logout, register } from "../controllers/authController";
+import {
+  login,
+  logout,
+  refreshAccessToken,
+  register,
+} from "../controllers/authController";
 import { authMiddleware } from "../middleware/auth";
+import { validateBody } from "../middleware/validate";
+import { loginSchema, registerSchema } from "../validation/authSchemas";
 
 const router = Router();
 
-// POST /api/auth/register
-router.post("/register", register);
+// POST /auth/register
+router.post("/register", validateBody(registerSchema), register);
 
-// POST /api/auth/login
-router.post("/login", login);
+// POST /auth/login
+router.post("/login", validateBody(loginSchema), login);
 
-// POST /api/auth/logout (protected so we only log out an authenticated user)
+// POST /auth/logout (protected so we only log out an authenticated user)
 router.post("/logout", authMiddleware, logout);
+
+// POST /auth/refresh - uses refresh_token cookie to issue new access_token
+router.post("/refresh", refreshAccessToken);
 
 export default router;

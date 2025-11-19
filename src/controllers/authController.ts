@@ -1,51 +1,56 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { z } from "zod";
 import { User } from "../models/User";
+import { LoginInput, RegisterInput } from "../validation/authSchemas";
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev_jwt_secret";
 const JWT_EXPIRES_IN = "7d";
+const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || JWT_SECRET;
+const REFRESH_EXPIRES_IN = "30d";
 
-const registerSchema = z.object({
-  fullName: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(6),
-});
-
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-});
-
-const createToken = (userId: string) =>
+const createAccessToken = (userId: string) =>
   jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
-const cookieOptions = {
+const createRefreshToken = (userId: string) =>
+  jwt.sign({ userId, type: "refresh" }, REFRESH_SECRET, {
+    expiresIn: REFRESH_EXPIRES_IN,
+  });
+
+const accessCookieOptions = {
   httpOnly: true,
   sameSite: "lax" as const,
   secure: process.env.NODE_ENV === "production",
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 
+const refreshCookieOptions = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+};
+
 export const register = async (req: Request, res: Response) => {
   try {
-    const parsed = registerSchema.parse(req.body);
+    const body = req.body as RegisterInput;
 
-    const existing = await User.findOne({ email: parsed.email });
+    const existing = await User.findOne({ email: body.email });
     if (existing) {
       return res.status(409).json({ message: "Email already in use" });
     }
 
-    const hashedPassword = await bcrypt.hash(parsed.password, 10);
+    const hashedPassword = await bcrypt.hash(body.password, 10);
     const user = await User.create({
-      fullName: parsed.fullName,
-      email: parsed.email,
+      fullName: body.fullName,
+      email: body.email,
       password: hashedPassword,
     });
 
-    const token = createToken(user.id);
-    res.cookie("access_token", token, cookieOptions);
+    const accessToken = createAccessToken(user.id);
+    const refreshToken = createRefreshToken(user.id);
+    res.cookie("access_token", accessToken, accessCookieOptions);
+    res.cookie("refresh_token", refreshToken, refreshCookieOptions);
 
     return res.status(201).json({
       user: {
@@ -55,13 +60,6 @@ export const register = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        message: "Validation failed",
-        errors: error.flatten(),
-      });
-    }
-
     // eslint-disable-next-line no-console
     console.error(error);
     return res.status(500).json({ message: "Internal server error" });
@@ -70,20 +68,22 @@ export const register = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const parsed = loginSchema.parse(req.body);
+    const body = req.body as LoginInput;
 
-    const user = await User.findOne({ email: parsed.email });
+    const user = await User.findOne({ email: body.email });
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const isMatch = await bcrypt.compare(parsed.password, user.password);
+    const isMatch = await bcrypt.compare(body.password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const token = createToken(user.id);
-    res.cookie("access_token", token, cookieOptions);
+    const accessToken = createAccessToken(user.id);
+    const refreshToken = createRefreshToken(user.id);
+    res.cookie("access_token", accessToken, accessCookieOptions);
+    res.cookie("refresh_token", refreshToken, refreshCookieOptions);
 
     return res.status(200).json({
       user: {
@@ -93,13 +93,6 @@ export const login = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        message: "Validation failed",
-        errors: error.flatten(),
-      });
-    }
-
     // eslint-disable-next-line no-console
     console.error(error);
     return res.status(500).json({ message: "Internal server error" });
@@ -112,6 +105,48 @@ export const logout = async (_req: Request, res: Response) => {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
   });
+  res.clearCookie("refresh_token", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
 
   return res.status(200).json({ message: "Logged out" });
+};
+
+interface RefreshPayload {
+  userId: string;
+  type?: string;
+}
+
+export const refreshAccessToken = async (req: Request, res: Response) => {
+  try {
+    const token = req.cookies?.refresh_token;
+
+    if (!token) {
+      return res.status(401).json({ message: "Missing refresh token" });
+    }
+
+    const payload = jwt.verify(token, REFRESH_SECRET) as RefreshPayload;
+
+    if (payload.type && payload.type !== "refresh") {
+      return res.status(401).json({ message: "Invalid refresh token" });
+    }
+
+    const user = await User.findById(payload.userId);
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    const accessToken = createAccessToken(user.id);
+    res.cookie("access_token", accessToken, accessCookieOptions);
+
+    return res.status(200).json({ message: "Access token refreshed" });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res
+      .status(401)
+      .json({ message: "Invalid or expired refresh token" });
+  }
 };
