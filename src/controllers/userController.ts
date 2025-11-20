@@ -12,6 +12,43 @@ import {
 import { bmr } from "../lib/utils/metrics";
 import cloudinary from "../config/cloudinary";
 
+export const getUser = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const user = await User.findById(userId)
+      .populate("foodLogs.foodItem")
+      .populate({
+        path: "inventories",
+        populate: { path: "foodItem" }
+      });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        healthProfile: user.healthProfile,
+        foodLogs: user.foodLogs,
+        goals: user.goals,
+        current_goal_index: user.current_goal_index,
+        inventories: user.inventories,
+      },
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 export const updateHealthProfile = async (req: Request, res: Response) => {
   try {
     const userId = req.userId;

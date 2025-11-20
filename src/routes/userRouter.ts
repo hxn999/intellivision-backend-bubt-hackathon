@@ -10,6 +10,7 @@ import {
   updateHealthProfile,
   updateProfile,
   uploadProfileImage,
+  getUser,
 } from "../controllers/userController";
 import { authMiddleware } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
@@ -27,6 +28,9 @@ const router = Router();
 
 // All user routes are protected
 router.use(authMiddleware);
+
+// GET /user/me
+router.get("/me", getUser);
 
 // PUT /user/health-profile
 router.put(
