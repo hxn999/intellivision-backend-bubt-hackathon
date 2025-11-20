@@ -11,6 +11,10 @@ import {
   updateProfile,
   uploadProfileImage,
   getUser,
+  uploadAIInventoryLog,
+  uploadAIFoodLog,
+  getAIInventoryLogs,
+  getAIFoodLogs,
 } from "../controllers/userController";
 import { authMiddleware } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
@@ -44,6 +48,19 @@ router.patch("/profile", validateBody(updateProfileSchema), updateProfile);
 
 // PATCH /user/profile-image - upload profile image
 router.patch("/profile-image", upload.single("image"), uploadProfileImage);
+
+// AI Image Logs
+// GET /user/ai-inventory-logs - get all AI inventory logs
+router.get("/ai-inventory-logs", getAIInventoryLogs);
+
+// POST /user/ai-inventory-log - upload AI generated inventory log image
+router.post("/ai-inventory-log", upload.single("image"), uploadAIInventoryLog);
+
+// GET /user/ai-food-logs - get all AI food logs
+router.get("/ai-food-logs", getAIFoodLogs);
+
+// POST /user/ai-food-log - upload AI generated food log image
+router.post("/ai-food-log", upload.single("image"), uploadAIFoodLog);
 
 // POST /user/food-logs
 router.post("/food-logs", validateBody(addFoodLogSchema), addFoodLog);

@@ -22,8 +22,8 @@ export const getUser = async (req: Request, res: Response) => {
     const user = await User.findById(userId)
       .populate("foodLogs.foodItem")
       .populate({
-        path: "inventories",
-        populate: { path: "foodItem" }
+        path: "inventory",
+        populate: { path: "foodItems" },
       });
 
     if (!user) {
@@ -39,7 +39,7 @@ export const getUser = async (req: Request, res: Response) => {
         foodLogs: user.foodLogs,
         goals: user.goals,
         current_goal_index: user.current_goal_index,
-        inventories: user.inventories,
+        inventory: user.inventory,
       },
     });
   } catch (error) {
@@ -450,6 +450,148 @@ export const setCurrentGoal = async (req: Request, res: Response) => {
     return res.status(200).json({
       goals: user.goals,
       current_goal_index: user.current_goal_index,
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const uploadAIInventoryLog = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No image provided" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Upload to Cloudinary
+    const cloudinary = (await import("../config/cloudinary")).default;
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "ai_inventory_logs",
+      resource_type: "image",
+    });
+
+    // Create image log object with unique ID
+    const mongoose = (await import("mongoose")).default;
+    const imageLog = {
+      _id: new mongoose.Types.ObjectId().toString(),
+      url: result.secure_url,
+    };
+
+    // Add image log to user's AI inventory logs
+    if (!user.ai_generated_inventory_logs) {
+      user.ai_generated_inventory_logs = [];
+    }
+    user.ai_generated_inventory_logs.push(imageLog as any);
+    await user.save();
+
+    return res.status(200).json({
+      message: "AI inventory log image uploaded successfully",
+      imageLog: imageLog,
+      ai_generated_inventory_logs: user.ai_generated_inventory_logs,
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const uploadAIFoodLog = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No image provided" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Upload to Cloudinary
+    const cloudinary = (await import("../config/cloudinary")).default;
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "ai_food_logs",
+      resource_type: "image",
+    });
+
+    // Create image log object with unique ID
+    const mongoose = (await import("mongoose")).default;
+    const imageLog = {
+      _id: new mongoose.Types.ObjectId().toString(),
+      url: result.secure_url,
+    };
+
+    // Add image log to user's AI food logs
+    if (!user.ai_generated_food_logs) {
+      user.ai_generated_food_logs = [];
+    }
+    user.ai_generated_food_logs.push(imageLog as any);
+    await user.save();
+
+    return res.status(200).json({
+      message: "AI food log image uploaded successfully",
+      imageLog: imageLog,
+      ai_generated_food_logs: user.ai_generated_food_logs,
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getAIInventoryLogs = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      ai_generated_inventory_logs: user.ai_generated_inventory_logs || [],
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getAIFoodLogs = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      ai_generated_food_logs: user.ai_generated_food_logs || [],
     });
   } catch (error) {
     // eslint-disable-next-line no-console

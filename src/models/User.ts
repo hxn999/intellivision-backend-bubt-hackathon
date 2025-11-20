@@ -19,6 +19,11 @@ export type {
   ActivityLevel,
 };
 
+export interface IAIImageLog {
+  _id: string;
+  url: string;
+}
+
 export interface IUser extends Document {
   fullName: string;
   email: string;
@@ -29,6 +34,8 @@ export interface IUser extends Document {
   foodLogs?: IFoodLogEntry[];
   goals?: IUserGoal[];
   current_goal_index?: number;
+  ai_generated_inventory_logs?: IAIImageLog[];
+  ai_generated_food_logs?: IAIImageLog[];
 }
 
 const UserSchema: Schema<IUser> = new Schema(
@@ -75,6 +82,24 @@ const UserSchema: Schema<IUser> = new Schema(
     current_goal_index: {
       type: Number,
       required: false,
+    },
+    ai_generated_inventory_logs: {
+      type: [
+        {
+          _id: { type: String, required: true },
+          url: { type: String, required: true },
+        },
+      ],
+      default: [],
+    },
+    ai_generated_food_logs: {
+      type: [
+        {
+          _id: { type: String, required: true },
+          url: { type: String, required: true },
+        },
+      ],
+      default: [],
     },
   },
   {
