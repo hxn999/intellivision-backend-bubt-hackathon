@@ -39,6 +39,9 @@ export interface IFoodItem extends Document {
   // Expiration info
   expiration_hours: number;
 
+  // Pricing
+  price_per_unit_bdt?: number;
+
   // Image
   image_url?: string;
 
@@ -46,18 +49,12 @@ export interface IFoodItem extends Document {
   tags: string[];
   allergens: string[];
   source: string;
+  created_by: mongoose.Types.ObjectId;
 }
 
 const FoodItemSchema: Schema<IFoodItem> = new Schema(
   {
     name: { type: String, required: true, trim: true },
-    slug: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-    },
     description: { type: String, trim: true },
 
     serving_quantity: { type: Number, required: true, default: 1 },
@@ -91,15 +88,14 @@ const FoodItemSchema: Schema<IFoodItem> = new Schema(
 
     expiration_hours: { type: Number, required: true },
 
+    price_per_unit_bdt: { type: Number },
+
     image_url: { type: String },
 
     tags: { type: [String], default: [] },
     allergens: { type: [String], default: [] },
 
-    source: { type: String, required: true, default: "Seeded" },
-    // is_verified: { type: Boolean, required: true, default: false },
-
-  
+    source: { type: String, required: true, default: "Seed" },
   },
   {
     timestamps: true,

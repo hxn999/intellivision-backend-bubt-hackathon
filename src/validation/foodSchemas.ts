@@ -38,6 +38,8 @@ export const createFoodItemSchema = z.object({
 
   expiration_hours: z.number().positive(),
 
+  price_per_unit_bdt: z.number().positive().optional(),
+
   image_url: z.string().url().optional(),
 
   tags: z.array(z.string()).optional().default([]),

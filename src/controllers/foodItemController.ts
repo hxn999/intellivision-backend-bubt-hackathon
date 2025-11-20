@@ -58,7 +58,6 @@ export const createFoodItem = async (req: Request, res: Response) => {
 
     const item = await FoodItem.create({
       ...itemData,
-      created_by: userId,
     });
 
     // Optionally add to user's inventory

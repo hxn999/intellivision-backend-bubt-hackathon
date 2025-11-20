@@ -6,7 +6,7 @@ dotenv.config();
 const DEFAULT_URI = "mongodb://127.0.0.1:27017/hackathon";
 
 export const connectDatabase = async () => {
-  const mongoUri =  DEFAULT_URI;
+  const mongoUri =  process.env.MONGO_URI||DEFAULT_URI;
 
   await mongoose.connect(mongoUri);
 
