@@ -11,7 +11,7 @@ export const updateHealthProfileSchema = z.object({
   hip_circumference_cm: z.number().optional(),
   neck_circumference_cm: z.number().optional(),
 
-  activity_level_factor: z.number().optional(),
+  activity_level_factor: z.number().positive(),
   steps_daily_average: z.number().int().optional(),
   sleep_hours_average: z.number().optional(),
 

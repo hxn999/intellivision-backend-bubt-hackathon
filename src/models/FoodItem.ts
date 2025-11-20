@@ -36,12 +36,16 @@ export interface IFoodItem extends Document {
   magnesium?: number;
   zinc?: number;
 
+  // Expiration info
+  expiration_hours: number;
+
+  // Image
+  image_url?: string;
+
   // Metadata & classification
   tags: string[];
   allergens: string[];
   source: string;
-  is_verified: boolean;
-  created_by: mongoose.Types.ObjectId;
 }
 
 const FoodItemSchema: Schema<IFoodItem> = new Schema(
@@ -85,17 +89,17 @@ const FoodItemSchema: Schema<IFoodItem> = new Schema(
     magnesium: { type: Number },
     zinc: { type: Number },
 
+    expiration_hours: { type: Number, required: true },
+
+    image_url: { type: String },
+
     tags: { type: [String], default: [] },
     allergens: { type: [String], default: [] },
 
-    source: { type: String, required: true, default: "User_Submission" },
+    source: { type: String, required: true, default: "Seeded" },
     // is_verified: { type: Boolean, required: true, default: false },
 
-    created_by: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+  
   },
   {
     timestamps: true,

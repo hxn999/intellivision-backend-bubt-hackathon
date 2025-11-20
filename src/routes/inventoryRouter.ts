@@ -1,10 +1,7 @@
 import { Router } from "express";
 import {
   addItemToInventory,
-  createInventory,
-  deleteInventory,
   getInventory,
-  listInventories,
   removeItemFromInventory,
   updateInventory,
 } from "../controllers/inventoryController";
@@ -12,7 +9,6 @@ import { authMiddleware } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
 import {
   addInventoryItemSchema,
-  createInventorySchema,
   updateInventorySchema,
 } from "../validation/foodSchemas";
 
@@ -20,29 +16,16 @@ const router = Router();
 
 router.use(authMiddleware);
 
-// GET /inventories
-router.get("/", listInventories);
+// GET /inventory - Get user's inventory
+router.get("/", getInventory);
 
-// GET /inventories/:id
-router.get("/:id", getInventory);
+// PATCH /inventory - Update inventory name
+router.patch("/", validateBody(updateInventorySchema), updateInventory);
 
-// POST /inventories
-router.post("/", validateBody(createInventorySchema), createInventory);
+// POST /inventory/items - Add item to inventory
+router.post("/items", validateBody(addInventoryItemSchema), addItemToInventory);
 
-// PATCH /inventories/:id
-router.patch("/:id", validateBody(updateInventorySchema), updateInventory);
-
-// DELETE /inventories/:id
-router.delete("/:id", deleteInventory);
-
-// POST /inventories/:id/items
-router.post(
-  "/:id/items",
-  validateBody(addInventoryItemSchema),
-  addItemToInventory
-);
-
-// DELETE /inventories/:id/items/:foodItemId
-router.delete("/:id/items/:foodItemId", removeItemFromInventory);
+// DELETE /inventory/items/:foodItemId - Remove item from inventory
+router.delete("/items/:foodItemId", removeItemFromInventory);
 
 export default router;

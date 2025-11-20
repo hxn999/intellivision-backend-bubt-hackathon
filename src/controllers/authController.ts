@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User } from "../models/User";
+import { FoodInventory } from "../models/FoodInventory";
 import { LoginInput, RegisterInput } from "../validation/authSchemas";
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev_jwt_secret";
@@ -47,6 +48,16 @@ export const register = async (req: Request, res: Response) => {
       password: hashedPassword,
     });
 
+    // Create default inventory for the user
+    const inventory = await FoodInventory.create({
+      name: "My Inventory",
+      user: user._id,
+    });
+
+    // Update user with inventory reference
+    user.inventory = inventory._id;
+    await user.save();
+
     const accessToken = createAccessToken(user.id);
     const refreshToken = createRefreshToken(user.id);
     res.cookie("access_token", accessToken, accessCookieOptions);
@@ -57,6 +68,7 @@ export const register = async (req: Request, res: Response) => {
         id: user.id,
         fullName: user.fullName,
         email: user.email,
+        image_url: user.image_url,
       },
     });
   } catch (error) {
@@ -90,6 +102,7 @@ export const login = async (req: Request, res: Response) => {
         id: user.id,
         fullName: user.fullName,
         email: user.email,
+        image_url: user.image_url,
       },
     });
   } catch (error) {

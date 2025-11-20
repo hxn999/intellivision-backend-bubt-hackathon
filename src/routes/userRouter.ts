@@ -9,6 +9,7 @@ import {
   updateGoal,
   updateHealthProfile,
   updateProfile,
+  uploadProfileImage,
 } from "../controllers/userController";
 import { authMiddleware } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
@@ -20,6 +21,7 @@ import {
   updateHealthProfileSchema,
   updateProfileSchema,
 } from "../validation/userSchemas";
+import { upload } from "../middleware/upload";
 
 const router = Router();
 
@@ -35,6 +37,9 @@ router.put(
 
 // PATCH /user/profile
 router.patch("/profile", validateBody(updateProfileSchema), updateProfile);
+
+// PATCH /user/profile-image - upload profile image
+router.patch("/profile-image", upload.single("image"), uploadProfileImage);
 
 // POST /user/food-logs
 router.post("/food-logs", validateBody(addFoodLogSchema), addFoodLog);

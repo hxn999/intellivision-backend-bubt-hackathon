@@ -36,12 +36,16 @@ export const createFoodItemSchema = z.object({
   magnesium: z.number().optional(),
   zinc: z.number().optional(),
 
+  expiration_hours: z.number().positive(),
+
+  image_url: z.string().url().optional(),
+
   tags: z.array(z.string()).optional().default([]),
   allergens: z.array(z.string()).optional().default([]),
   source: z.string().optional().default("User_Submission"),
 
-  // Optional: immediately attach to an inventory owned by the user
-  inventoryId: z.string().min(1).optional(),
+  // Optional: add to user's inventory immediately after creation
+  addToInventory: z.boolean().optional().default(false),
 });
 
 export type CreateFoodItemInput = z.infer<typeof createFoodItemSchema>;
@@ -49,12 +53,6 @@ export type CreateFoodItemInput = z.infer<typeof createFoodItemSchema>;
 export const updateFoodItemSchema = createFoodItemSchema.partial();
 
 export type UpdateFoodItemInput = z.infer<typeof updateFoodItemSchema>;
-
-export const createInventorySchema = z.object({
-  name: z.string().min(1),
-});
-
-export type CreateInventoryInput = z.infer<typeof createInventorySchema>;
 
 export const updateInventorySchema = z.object({
   name: z.string().min(1).optional(),
