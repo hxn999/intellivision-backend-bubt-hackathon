@@ -7,6 +7,64 @@ import {
   UpdateInventoryInput,
 } from "../validation/foodSchemas";
 
+// POST /inventory/create - Create inventory with User_Submission food items
+export const createInventory = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if user already has an inventory
+    if (user.inventory) {
+      const existingInventory = await FoodInventory.findById(
+        user.inventory
+      ).populate("foodItems");
+      return res.status(200).json({
+        message: "Inventory already exists",
+        inventory: existingInventory,
+        alreadyExists: true,
+      });
+    }
+
+    // Find all food items with source "User_Submission"
+    const userSubmissionFoodItems = await FoodItem.find({
+      source: "User_Submission",
+    });
+
+    // Create new inventory
+    const inventory = new FoodInventory({
+      name: `${user.fullName}'s Inventory`,
+      user: userId,
+      foodItems: userSubmissionFoodItems.map((item) => item._id),
+    });
+
+    await inventory.save();
+
+    // Update user with inventory reference
+    user.inventory = inventory._id;
+    await user.save();
+
+    // Populate food items before returning
+    const populatedInventory = await inventory.populate("foodItems");
+
+    return res.status(201).json({
+      message: "Inventory created successfully",
+      inventory: populatedInventory,
+      itemsAdded: userSubmissionFoodItems.length,
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 // GET /inventory - Get user's inventory
 export const getInventory = async (req: Request, res: Response) => {
   try {
