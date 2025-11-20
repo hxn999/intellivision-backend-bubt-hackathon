@@ -13,7 +13,7 @@ const app: Application = express();
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
-  origin: 'http://localhost:5472', // 1. Allow ONLY your frontend URL
+  origin: process.env.FRONTEND_URL || 'http://localhost:5472', // 1. Allow ONLY your frontend URL
   credentials: true                // 2. Allow cookies/sessions
 }));
 
