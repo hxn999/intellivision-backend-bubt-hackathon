@@ -11,6 +11,10 @@ import {
 } from "../validation/userSchemas";
 import { bmr } from "../lib/utils/metrics";
 import cloudinary from "../config/cloudinary";
+import { GoogleGenAI } from "@google/genai";
+
+import dotenv from "dotenv";
+dotenv.config();
 
 export const getUser = async (req: Request, res: Response) => {
   try {
@@ -476,7 +480,11 @@ export const uploadAIInventoryLog = async (req: Request, res: Response) => {
 
     // Upload to Cloudinary
     const cloudinary = (await import("../config/cloudinary")).default;
-    const result = await cloudinary.uploader.upload(req.file.path, {
+
+    // Convert buffer to base64 data URI for Cloudinary upload
+    const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+
+    const result = await cloudinary.uploader.upload(base64Image, {
       folder: "ai_inventory_logs",
       resource_type: "image",
     });
@@ -531,8 +539,9 @@ export const uploadAIInventoryLog = async (req: Request, res: Response) => {
       }
 
       // Use Gemini AI to generate food item JSON
-      const { GoogleGenAI } = await import("@google/genai");
-      const ai = new GoogleGenAI({});
+      const ai = new GoogleGenAI({
+          apiKey: "AIzaSyCii03U9Q6BYR3zJsJbS7uE2lokcBnEcus",
+      });
 
       const systemInstruction = `You are a food inventory assistant. Given OCR text from a food product image, extract and return ONLY a valid JSON object (no markdown, no backticks, no formatting) with this exact structure:
 {
@@ -557,15 +566,16 @@ export const uploadAIInventoryLog = async (req: Request, res: Response) => {
 If you cannot extract accurate nutritional information, provide reasonable estimates. Return ONLY the JSON object, nothing else.`;
 
       const aiResponse = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.0-flash",
         contents: `OCR Text from food product:\n\n${allParsedText}`,
         config: {
           systemInstruction: systemInstruction,
         },
       });
 
-      const generatedText = (aiResponse.text || "").trim();
+      const generatedText = (aiResponse.text || "").trim().replace(/```json|```/g, "").trim();
 
+      // console.log("Generated AI JSON:", generatedText);
       // Parse the JSON response
       let foodItemData;
       try {
@@ -670,7 +680,11 @@ export const uploadAIFoodLog = async (req: Request, res: Response) => {
 
     // Upload to Cloudinary
     const cloudinary = (await import("../config/cloudinary")).default;
-    const result = await cloudinary.uploader.upload(req.file.path, {
+
+    // Convert buffer to base64 data URI for Cloudinary upload
+    const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+
+    const result = await cloudinary.uploader.upload(base64Image, {
       folder: "ai_food_logs",
       resource_type: "image",
     });
@@ -1115,6 +1129,8 @@ export const uploadProfileImage = async (req: Request, res: Response) => {
       resource_type: "image",
       public_id: `user_${userId}_${Date.now()}`,
     });
+
+
 
     user.image_url = uploadResult.secure_url;
     await user.save();
