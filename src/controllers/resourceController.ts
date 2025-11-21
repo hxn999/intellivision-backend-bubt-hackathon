@@ -11,10 +11,7 @@ import {
 // GET /resources - List all resources with filtering and pagination
 export const listResources = async (req: Request, res: Response) => {
   try {
-    const userId = req.userId;
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+  
 
     const query = req.query as unknown as GetResourcesQueryInput;
     const { type, tag, search, page = 1, limit = 10 } = query;
@@ -40,7 +37,6 @@ export const listResources = async (req: Request, res: Response) => {
     // Execute query with pagination
     const [resources, total] = await Promise.all([
       Resource.find(filter)
-        .populate("created_by", "fullName email image_url")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
