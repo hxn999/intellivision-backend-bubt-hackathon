@@ -476,7 +476,11 @@ export const uploadAIInventoryLog = async (req: Request, res: Response) => {
 
     // Upload to Cloudinary
     const cloudinary = (await import("../config/cloudinary")).default;
-    const result = await cloudinary.uploader.upload(req.file.path, {
+
+    // Convert buffer to base64 data URI for Cloudinary upload
+    const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+
+    const result = await cloudinary.uploader.upload(base64Image, {
       folder: "ai_inventory_logs",
       resource_type: "image",
     });
@@ -518,6 +522,7 @@ export const uploadAIInventoryLog = async (req: Request, res: Response) => {
         ).join("\n");
       }
 
+      console.log(allParsedText)
       if (!allParsedText.trim()) {
         return res.status(200).json({
           message:
@@ -668,7 +673,11 @@ export const uploadAIFoodLog = async (req: Request, res: Response) => {
 
     // Upload to Cloudinary
     const cloudinary = (await import("../config/cloudinary")).default;
-    const result = await cloudinary.uploader.upload(req.file.path, {
+
+    // Convert buffer to base64 data URI for Cloudinary upload
+    const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+
+    const result = await cloudinary.uploader.upload(base64Image, {
       folder: "ai_food_logs",
       resource_type: "image",
     });
@@ -1113,6 +1122,8 @@ export const uploadProfileImage = async (req: Request, res: Response) => {
       resource_type: "image",
       public_id: `user_${userId}_${Date.now()}`,
     });
+
+
 
     user.image_url = uploadResult.secure_url;
     await user.save();

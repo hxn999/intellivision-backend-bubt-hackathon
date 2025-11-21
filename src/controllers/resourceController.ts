@@ -43,6 +43,16 @@ export const listResources = async (req: Request, res: Response) => {
       Resource.countDocuments(filter),
     ]);
 
+    console.log({
+        resources,
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+        },
+    })
+
     return res.status(200).json({
       resources,
       pagination: {
