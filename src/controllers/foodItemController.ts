@@ -15,7 +15,7 @@ export const listFoodItems = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const items = await FoodItem.find({ created_by: userId });
+    const items = await FoodItem.find();
     return res.status(200).json({ items });
   } catch (error) {
     // eslint-disable-next-line no-console
@@ -32,7 +32,7 @@ export const getFoodItem = async (req: Request, res: Response) => {
     }
 
     const { id } = req.params;
-    const item = await FoodItem.findOne({ _id: id, created_by: userId });
+    const item = await FoodItem.findById(id);
     if (!item) {
       return res.status(404).json({ message: "Food item not found" });
     }
@@ -99,7 +99,7 @@ export const updateFoodItem = async (req: Request, res: Response) => {
     const { id } = req.params;
     const body = req.body as UpdateFoodItemInput;
 
-    const item = await FoodItem.findOne({ _id: id, created_by: userId });
+    const item = await FoodItem.findById(id);
     if (!item) {
       return res.status(404).json({ message: "Food item not found" });
     }
@@ -124,10 +124,7 @@ export const deleteFoodItem = async (req: Request, res: Response) => {
 
     const { id } = req.params;
 
-    const item = await FoodItem.findOneAndDelete({
-      _id: id,
-      created_by: userId,
-    });
+    const item = await FoodItem.findByIdAndDelete(id);
 
     if (!item) {
       return res.status(404).json({ message: "Food item not found" });
@@ -154,7 +151,7 @@ export const uploadFoodItemImage = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    const item = await FoodItem.findOne({ _id: id, created_by: userId });
+    const item = await FoodItem.findById(id);
     if (!item) {
       return res.status(404).json({ message: "Food item not found" });
     }

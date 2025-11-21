@@ -495,11 +495,154 @@ export const uploadAIInventoryLog = async (req: Request, res: Response) => {
     user.ai_generated_inventory_logs.push(imageLog as any);
     await user.save();
 
-    return res.status(200).json({
-      message: "AI inventory log image uploaded successfully",
-      imageLog: imageLog,
-      ai_generated_inventory_logs: user.ai_generated_inventory_logs,
-    });
+    // Perform OCR on the uploaded image
+    try {
+      const ocrApiKey = process.env.OCR_API_KEY;
+      if (!ocrApiKey) {
+        throw new Error("OCR_API_KEY not configured");
+      }
+
+      // Call OCR API
+      const ocrResponse = await fetch(
+        `https://api.ocr.space/parse/image?apikey=${ocrApiKey}&url=${encodeURIComponent(
+          result.secure_url
+        )}`
+      );
+      const ocrData = await ocrResponse.json();
+
+      // Extract all parsed text
+      let allParsedText = "";
+      if (ocrData.ParsedResults && Array.isArray(ocrData.ParsedResults)) {
+        allParsedText = ocrData.ParsedResults.map(
+          (r: any) => r.ParsedText || ""
+        ).join("\n");
+      }
+
+      if (!allParsedText.trim()) {
+        return res.status(200).json({
+          message:
+            "AI inventory log image uploaded successfully (no text detected)",
+          imageLog: imageLog,
+          ai_generated_inventory_logs: user.ai_generated_inventory_logs,
+          ocrText: allParsedText,
+        });
+      }
+
+      // Use Gemini AI to generate food item JSON
+      const { GoogleGenAI } = await import("@google/genai");
+      const ai = new GoogleGenAI({});
+
+      const systemInstruction = `You are a food inventory assistant. Given OCR text from a food product image, extract and return ONLY a valid JSON object (no markdown, no backticks, no formatting) with this exact structure:
+{
+  "name": "string",
+  "description": "string (optional)",
+  "serving_quantity": number,
+  "serving_unit": "string (e.g., 'piece', 'cup', 'bottle')",
+  "serving_weight_grams": number,
+  "metric_serving_amount": number (default 100),
+  "metric_serving_unit": "string (g or ml)",
+  "calories": number,
+  "protein": number,
+  "carbohydrate": number,
+  "fat_total": number,
+  "fiber": number (optional),
+  "sodium": number (optional),
+  "expiration_hours": number (estimate based on product type),
+  "tags": ["string array of relevant tags"],
+  "allergens": ["string array of allergens if any"],
+  "source": "AI_Generated"
+}
+If you cannot extract accurate nutritional information, provide reasonable estimates. Return ONLY the JSON object, nothing else.`;
+
+      const aiResponse = await ai.models.generateContent({
+        model: "gemini-2.0-flash-exp",
+        contents: `OCR Text from food product:\n\n${allParsedText}`,
+        config: {
+          systemInstruction: systemInstruction,
+        },
+      });
+
+      const generatedText = (aiResponse.text || "").trim();
+
+      // Parse the JSON response
+      let foodItemData;
+      try {
+        foodItemData = JSON.parse(generatedText);
+      } catch (parseError) {
+        // eslint-disable-next-line no-console
+        console.error("Failed to parse AI response:", generatedText);
+        return res.status(200).json({
+          message: "Image uploaded but failed to parse food item",
+          imageLog: imageLog,
+          ai_generated_inventory_logs: user.ai_generated_inventory_logs,
+          ocrText: allParsedText,
+          aiResponse: generatedText,
+          error: "Failed to parse AI response as JSON",
+        });
+      }
+
+      // Create the food item
+      const { FoodItem } = await import("../models/FoodItem");
+      const foodItem = new FoodItem(foodItemData);
+      await foodItem.save();
+
+      // Add to user's inventory
+      const { FoodInventory } = await import("../models/FoodInventory");
+
+      // Get or create inventory
+      let inventory;
+      if (user.inventory) {
+        inventory = await FoodInventory.findById(user.inventory);
+      }
+
+      if (!inventory) {
+        // Create new inventory if it doesn't exist
+        inventory = new FoodInventory({
+          name: `${user.fullName}'s Inventory`,
+          user: userId,
+          foodItems: [],
+        });
+        await inventory.save();
+        user.inventory = inventory._id;
+        await user.save();
+      }
+
+      // Add food item to inventory if not already present
+      const itemExists = inventory.foodItems.some(
+        (item: any) => item.toString() === foodItem._id.toString()
+      );
+
+      if (!itemExists) {
+        inventory.foodItems.push(foodItem._id);
+        await inventory.save();
+      }
+
+      // Populate and return
+      const populatedInventory = await FoodInventory.findById(
+        inventory._id
+      ).populate("foodItems");
+
+      return res.status(200).json({
+        message: "AI inventory log processed successfully",
+        imageLog: imageLog,
+        ai_generated_inventory_logs: user.ai_generated_inventory_logs,
+        ocrText: allParsedText,
+        generatedFoodItem: foodItem,
+        inventory: populatedInventory,
+      });
+    } catch (aiError) {
+      // eslint-disable-next-line no-console
+      console.error("AI processing error:", aiError);
+
+      // Still return success for image upload, but indicate AI processing failed
+      return res.status(200).json({
+        message: "Image uploaded but AI processing failed",
+        imageLog: imageLog,
+        ai_generated_inventory_logs: user.ai_generated_inventory_logs,
+        error:
+          aiError instanceof Error ? aiError.message : "AI processing failed",
+      });
+    }
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(error);
@@ -592,6 +735,119 @@ export const getAIFoodLogs = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       ai_generated_food_logs: user.ai_generated_food_logs || [],
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getMealPlan = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const user = await User.findById(userId).populate("meal_plan.foodItem");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      meal_plan: user.meal_plan || [],
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const addMealPlanItem = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const body =
+      req.body as import("../validation/userSchemas").AddMealPlanItemInput;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Verify food item exists
+    const FoodItem = (await import("../models/FoodItem")).FoodItem;
+    const foodItem = await FoodItem.findById(body.foodItemId);
+    if (!foodItem) {
+      return res.status(404).json({ message: "Food item not found" });
+    }
+
+    // Add to meal plan
+    if (!user.meal_plan) {
+      user.meal_plan = [];
+    }
+
+    user.meal_plan.push({
+      quantity: body.quantity,
+      foodItem: body.foodItemId,
+    } as any);
+
+    await user.save();
+
+    // Populate before returning
+    const populatedUser = await User.findById(userId).populate(
+      "meal_plan.foodItem"
+    );
+
+    return res.status(201).json({
+      message: "Item added to meal plan",
+      meal_plan: populatedUser?.meal_plan || [],
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const deleteMealPlanItem = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const index = Number(req.params.index);
+    if (Number.isNaN(index) || index < 0) {
+      return res.status(400).json({ message: "Invalid meal plan item index" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.meal_plan || index >= user.meal_plan.length) {
+      return res.status(404).json({ message: "Meal plan item not found" });
+    }
+
+    const [removed] = user.meal_plan.splice(index, 1);
+    await user.save();
+
+    // Populate before returning
+    const populatedUser = await User.findById(userId).populate(
+      "meal_plan.foodItem"
+    );
+
+    return res.status(200).json({
+      message: "Item removed from meal plan",
+      deleted: removed,
+      meal_plan: populatedUser?.meal_plan || [],
     });
   } catch (error) {
     // eslint-disable-next-line no-console

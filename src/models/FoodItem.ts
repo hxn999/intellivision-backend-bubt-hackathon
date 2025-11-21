@@ -3,7 +3,6 @@ import mongoose, { Document, Schema } from "mongoose";
 export interface IFoodItem extends Document {
   // Basic info
   name: string;
-  slug: string;
   description?: string;
 
   // Measurement & serving logic
@@ -49,7 +48,6 @@ export interface IFoodItem extends Document {
   tags: string[];
   allergens: string[];
   source: string;
-  created_by: mongoose.Types.ObjectId;
 }
 
 const FoodItemSchema: Schema<IFoodItem> = new Schema(

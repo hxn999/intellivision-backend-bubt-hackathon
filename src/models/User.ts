@@ -24,6 +24,11 @@ export interface IAIImageLog {
   url: string;
 }
 
+export interface IMealPlanItem {
+  quantity: number;
+  foodItem: Types.ObjectId;
+}
+
 export interface IUser extends Document {
   fullName: string;
   email: string;
@@ -36,6 +41,7 @@ export interface IUser extends Document {
   current_goal_index?: number;
   ai_generated_inventory_logs?: IAIImageLog[];
   ai_generated_food_logs?: IAIImageLog[];
+  meal_plan?: IMealPlanItem[];
 }
 
 const UserSchema: Schema<IUser> = new Schema(
@@ -97,6 +103,19 @@ const UserSchema: Schema<IUser> = new Schema(
         {
           _id: { type: String, required: true },
           url: { type: String, required: true },
+        },
+      ],
+      default: [],
+    },
+    meal_plan: {
+      type: [
+        {
+          quantity: { type: Number, required: true },
+          foodItem: {
+            type: Schema.Types.ObjectId,
+            ref: "FoodItem",
+            required: true,
+          },
         },
       ],
       default: [],

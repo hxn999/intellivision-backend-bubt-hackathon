@@ -105,3 +105,10 @@ export const setCurrentGoalSchema = z.object({
 });
 
 export type SetCurrentGoalInput = z.infer<typeof setCurrentGoalSchema>;
+
+export const addMealPlanItemSchema = z.object({
+  quantity: z.number().positive(),
+  foodItemId: z.string().min(1),
+});
+
+export type AddMealPlanItemInput = z.infer<typeof addMealPlanItemSchema>;

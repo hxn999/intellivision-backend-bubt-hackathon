@@ -155,10 +155,7 @@ export const addItemToInventory = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Inventory not found" });
     }
 
-    const foodItem = await FoodItem.findOne({
-      _id: body.foodItemId,
-      created_by: userId,
-    });
+    const foodItem = await FoodItem.findById(body.foodItemId);
 
     if (!foodItem) {
       return res.status(404).json({ message: "Food item not found" });

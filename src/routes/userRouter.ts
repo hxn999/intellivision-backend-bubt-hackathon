@@ -15,11 +15,15 @@ import {
   uploadAIFoodLog,
   getAIInventoryLogs,
   getAIFoodLogs,
+  getMealPlan,
+  addMealPlanItem,
+  deleteMealPlanItem,
 } from "../controllers/userController";
 import { authMiddleware } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
 import {
   addFoodLogSchema,
+  addMealPlanItemSchema,
   createGoalSchema,
   setCurrentGoalSchema,
   updateGoalSchema,
@@ -87,5 +91,15 @@ router.patch(
   validateBody(setCurrentGoalSchema),
   setCurrentGoal
 );
+
+// Meal Plan
+// GET /user/meal-plan
+router.get("/meal-plan", getMealPlan);
+
+// POST /user/meal-plan
+router.post("/meal-plan", validateBody(addMealPlanItemSchema), addMealPlanItem);
+
+// DELETE /user/meal-plan/:index
+router.delete("/meal-plan/:index", deleteMealPlanItem);
 
 export default router;

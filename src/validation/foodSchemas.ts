@@ -3,7 +3,6 @@ import { z } from "zod";
 export const createFoodItemSchema = z.object({
   // Basic info
   name: z.string().min(1),
-  slug: z.string().min(1),
   description: z.string().optional(),
 
   // Measurement & serving logic
