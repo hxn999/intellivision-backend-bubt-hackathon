@@ -504,11 +504,13 @@ export const uploadAIInventoryLog = async (req: Request, res: Response) => {
 
       // Call OCR API
       const ocrResponse = await fetch(
-        `https://api.ocr.space/parse/image?apikey=${ocrApiKey}&url=${encodeURIComponent(
+        `https://api.ocr.space/parse/ImageUrl?apikey=${ocrApiKey}&url=${encodeURIComponent(
           result.secure_url
         )}`
       );
       const ocrData = await ocrResponse.json();
+
+      console.log(ocrData)
 
       // Extract all parsed text
       let allParsedText = "";
@@ -555,7 +557,7 @@ export const uploadAIInventoryLog = async (req: Request, res: Response) => {
 If you cannot extract accurate nutritional information, provide reasonable estimates. Return ONLY the JSON object, nothing else.`;
 
       const aiResponse = await ai.models.generateContent({
-        model: "gemini-2.0-flash-exp",
+        model: "gemini-2.5-flash",
         contents: `OCR Text from food product:\n\n${allParsedText}`,
         config: {
           systemInstruction: systemInstruction,

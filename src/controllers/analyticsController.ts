@@ -1,5 +1,9 @@
 import { Request, Response } from "express";
-import { SingleDayAnalyticsInput } from "../validation/analyticsSchemas";
+import {
+  SingleDayAnalyticsInput,
+  MonthlyFoodLogsInput,
+  WeeklyFoodLogsInput,
+} from "../validation/analyticsSchemas";
 import { User } from "../models/User";
 import { datesAreOnSameDay } from "../lib/utils/date";
 import { IFoodItem } from "../models/FoodItem";
@@ -153,7 +157,224 @@ export const getSingleDayAnalytics = async (req: Request, res: Response) => {
     return res.status(200).json({
       message: "Single day analytics",
       date: body.date,
-      result_percentage
+      result_percentage,
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getMonthlyFoodLogs = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const body = req.body as MonthlyFoodLogsInput;
+    const { year, month } = body;
+
+    const user = await User.findById(userId).populate("foodLogs.foodItem");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Get number of days in the month
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    // Create array to store daily logs
+    const dailyLogs: Array<{
+      date: string;
+      logs: typeof user.foodLogs;
+      summary: IResult;
+    }> = [];
+
+    // Iterate through each day of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const currentDate = new Date(year, month - 1, day);
+      const dayLogs: typeof user.foodLogs = [];
+
+      const result: IResult = {
+        calcium: 0,
+        calories: 0,
+        carbohydrate: 0,
+        cholesterol: 0,
+        fat_total: 0,
+        fiber: 0,
+        iron: 0,
+        magnesium: 0,
+        potassium: 0,
+        protein: 0,
+        sodium: 0,
+        vitamin_a: 0,
+        vitamin_c: 0,
+        vitamin_d: 0,
+      };
+
+      // Filter food logs for this specific day
+      if (user.foodLogs) {
+        user.foodLogs.forEach((e) => {
+          if (datesAreOnSameDay(e.date, currentDate)) {
+            dayLogs.push(e);
+            const foodItem = e.foodItem as unknown as IFoodItem;
+            const consumedFactor =
+              (e.quantity * foodItem.serving_quantity) / 100;
+
+            result.calories += consumedFactor * foodItem.calories;
+            result.protein += consumedFactor * foodItem.protein;
+            result.carbohydrate += consumedFactor * foodItem.carbohydrate;
+            result.fat_total += consumedFactor * foodItem.fat_total;
+            if (foodItem.fiber) result.fiber += consumedFactor * foodItem.fiber;
+            if (foodItem.sodium)
+              result.sodium += consumedFactor * foodItem.sodium;
+            if (foodItem.cholesterol)
+              result.cholesterol += consumedFactor * foodItem.cholesterol;
+            if (foodItem.potassium)
+              result.potassium += consumedFactor * foodItem.potassium;
+            if (foodItem.vitamin_a)
+              result.vitamin_a += consumedFactor * foodItem.vitamin_a;
+            if (foodItem.vitamin_c)
+              result.vitamin_c += consumedFactor * foodItem.vitamin_c;
+            if (foodItem.vitamin_d)
+              result.vitamin_d += consumedFactor * foodItem.vitamin_d;
+            if (foodItem.calcium)
+              result.calcium += consumedFactor * foodItem.calcium;
+            if (foodItem.iron) result.iron += consumedFactor * foodItem.iron;
+            if (foodItem.magnesium)
+              result.magnesium += consumedFactor * foodItem.magnesium;
+          }
+        });
+      }
+
+      dailyLogs.push({
+        date: currentDate.toISOString().split("T")[0],
+        logs: dayLogs,
+        summary: result,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Monthly food logs",
+      year,
+      month,
+      dailyLogs,
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getWeeklyFoodLogs = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const body = req.body as WeeklyFoodLogsInput;
+    const startDate = new Date(body.startDate);
+
+    const user = await User.findById(userId).populate("foodLogs.foodItem");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Create array to store daily logs for 7 days
+    const dailyLogs: Array<{
+      date: string;
+      dayOfWeek: string;
+      logs: typeof user.foodLogs;
+      summary: IResult;
+    }> = [];
+
+    const daysOfWeek = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+
+    // Iterate through 7 days starting from startDate
+    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+      const currentDate = new Date(startDate);
+      currentDate.setDate(startDate.getDate() + dayOffset);
+
+      const dayLogs: typeof user.foodLogs = [];
+
+      const result: IResult = {
+        calcium: 0,
+        calories: 0,
+        carbohydrate: 0,
+        cholesterol: 0,
+        fat_total: 0,
+        fiber: 0,
+        iron: 0,
+        magnesium: 0,
+        potassium: 0,
+        protein: 0,
+        sodium: 0,
+        vitamin_a: 0,
+        vitamin_c: 0,
+        vitamin_d: 0,
+      };
+
+      // Filter food logs for this specific day
+      if (user.foodLogs) {
+        user.foodLogs.forEach((e) => {
+          if (datesAreOnSameDay(e.date, currentDate)) {
+            dayLogs.push(e);
+            const foodItem = e.foodItem as unknown as IFoodItem;
+            const consumedFactor =
+              (e.quantity * foodItem.serving_quantity) / 100;
+
+            result.calories += consumedFactor * foodItem.calories;
+            result.protein += consumedFactor * foodItem.protein;
+            result.carbohydrate += consumedFactor * foodItem.carbohydrate;
+            result.fat_total += consumedFactor * foodItem.fat_total;
+            if (foodItem.fiber) result.fiber += consumedFactor * foodItem.fiber;
+            if (foodItem.sodium)
+              result.sodium += consumedFactor * foodItem.sodium;
+            if (foodItem.cholesterol)
+              result.cholesterol += consumedFactor * foodItem.cholesterol;
+            if (foodItem.potassium)
+              result.potassium += consumedFactor * foodItem.potassium;
+            if (foodItem.vitamin_a)
+              result.vitamin_a += consumedFactor * foodItem.vitamin_a;
+            if (foodItem.vitamin_c)
+              result.vitamin_c += consumedFactor * foodItem.vitamin_c;
+            if (foodItem.vitamin_d)
+              result.vitamin_d += consumedFactor * foodItem.vitamin_d;
+            if (foodItem.calcium)
+              result.calcium += consumedFactor * foodItem.calcium;
+            if (foodItem.iron) result.iron += consumedFactor * foodItem.iron;
+            if (foodItem.magnesium)
+              result.magnesium += consumedFactor * foodItem.magnesium;
+          }
+        });
+      }
+
+      dailyLogs.push({
+        date: currentDate.toISOString().split("T")[0],
+        dayOfWeek: daysOfWeek[currentDate.getDay()],
+        logs: dayLogs,
+        summary: result,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Weekly food logs",
+      startDate: startDate.toISOString().split("T")[0],
+      endDate: new Date(startDate.getTime() + 6 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0],
+      dailyLogs,
     });
   } catch (error) {
     // eslint-disable-next-line no-console
