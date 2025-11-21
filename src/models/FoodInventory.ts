@@ -4,6 +4,8 @@ export interface IFoodInventory extends Document {
   name: string;
   user: mongoose.Types.ObjectId;
   foodItems: mongoose.Types.ObjectId[];
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const FoodInventorySchema: Schema<IFoodInventory> = new Schema(

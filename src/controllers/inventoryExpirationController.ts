@@ -54,7 +54,16 @@ export const checkInventoryExpiration = async (req: Request, res: Response) => {
     }
 
     const now = new Date();
-    const inventoryCreatedAt = inventory.createdAt || now;
+
+    // Fallback: get inventory creation time from _id timestamp if 'createdAt' doesn't exist
+    let inventoryCreatedAt: Date;
+    if (inventory.createdAt instanceof Date) {
+      inventoryCreatedAt = inventory.createdAt;
+    } else if (inventory._id && typeof inventory._id.getTimestamp === 'function') {
+      inventoryCreatedAt = inventory._id.getTimestamp();
+    } else {
+      inventoryCreatedAt = now;
+    }
 
     const warning: ExpirationItem[] = [];
     const wasted: ExpirationItem[] = [];

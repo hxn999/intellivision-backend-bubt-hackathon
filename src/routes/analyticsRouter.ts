@@ -10,6 +10,7 @@ import {
   getSingleDayAnalytics,
   getMonthlyFoodLogs,
   getWeeklyFoodLogs,
+  getSdgImpactReport,
 } from "../controllers/analyticsController";
 
 const router = Router();
@@ -31,10 +32,13 @@ router.post(
 );
 
 // POST /analytics/weekly - Get food logs for 7 days, separated by day
+router.post("/weekly", validateBody(weeklyFoodLogsSchema), getWeeklyFoodLogs);
+
+// POST /analytics/sdg-impact - Get SDG impact score and summary for the week
 router.post(
-  "/weekly",
+  "/sdg-impact",
   validateBody(weeklyFoodLogsSchema),
-  getWeeklyFoodLogs
+  getSdgImpactReport
 );
 
 export default router;

@@ -1251,6 +1251,7 @@ export const generateAIMealPlan = async (req: Request, res: Response) => {
       fiber: item.fiber,
       serving_quantity: item.serving_quantity,
       serving_unit: item.serving_unit,
+      price_per_unit_bdt: item.price_per_unit_bdt || 0,
     }));
 
     // Prepare goal data
@@ -1263,52 +1264,46 @@ export const generateAIMealPlan = async (req: Request, res: Response) => {
     };
 
     // Create AI prompt
-    const systemInstruction = `You are a professional nutritionist and meal planner. Your task is to create a balanced daily meal plan using ONLY the food items provided in the user's inventory. The meal plan must meet the user's nutritional goals as closely as possible.
+    const budgetInfo = body.budget
+      ? `BUDGET: ${body.budget} BDT (Bangladeshi Taka) - Stay within this budget`
+      : "";
+
+    const systemInstruction = `You are a professional nutritionist and meal planner. Your task is to create a simple daily meal plan using the food items provided in the user's inventory.
 
 IMPORTANT RULES:
-1. ONLY use food items from the provided inventory list
-2. Create exactly ${body.mealCount || 3} meals for the day
-3. Try to meet the nutritional goals (calories, protein, carbs, fats, fiber)
-4. Ensure meals are balanced and realistic
-5. Consider serving sizes and quantities
-6. Return ONLY valid JSON, no markdown formatting, no backticks, no extra text
+1. PREFER to use food items from the provided inventory list
+2. If the inventory lacks variety or essential nutrients, you MAY suggest adding missing items to improve the meal plan
+3. If the inventory is insufficient for a balanced diet, provide recommendations in a "suggestions" field
+4. Create exactly ${body.mealCount || 3} meal entries for the day
+5. Include appropriate meal times (breakfast around 08:00am, lunch around 12:30pm, dinner around 07:00pm, snacks in between)
+6. Calculate price based on price_per_unit_bdt × quantity
+7. ${budgetInfo ? "Stay within the provided budget" : "Keep costs reasonable"}
+8. Return ONLY valid JSON, no markdown formatting, no backticks, no extra text
 
 Response format (MUST be valid JSON):
 {
-  "meals": [
+  "items": [
     {
-      "name": "Breakfast",
-      "items": [
-        {
-          "foodItemId": "actual_id_from_inventory",
-          "foodItemName": "Food Name",
-          "quantity": 2,
-          "servingUnit": "serving unit"
-        }
-      ],
-      "totals": {
-        "calories": 500,
-        "protein": 25,
-        "carbohydrate": 60,
-        "fat_total": 15,
-        "fiber": 8
-      }
+      "foodItemName": "Oatmeal",
+      "quantity": 1.5,
+      "price": 45.50,
+      "time_to_eat": "08:00am"
+    },
+    {
+      "foodItemName": "Banana",
+      "quantity": 2,
+      "price": 20.00,
+      "time_to_eat": "08:15am"
+    },
+    {
+      "foodItemName": "Chicken Breast",
+      "quantity": 2,
+      "price": 180.00,
+      "time_to_eat": "12:30pm"
     }
   ],
-  "dailyTotals": {
-    "calories": 2000,
-    "protein": 150,
-    "carbohydrate": 200,
-    "fat_total": 60,
-    "fiber": 30
-  },
-  "goalComparison": {
-    "caloriesDiff": -100,
-    "proteinDiff": 10,
-    "carbsDiff": 20,
-    "fatDiff": -5,
-    "fiberDiff": 5
-  }
+  "totalPrice": 245.50,
+  "suggestions": "Optional: Add more vegetables like spinach and broccoli for better fiber intake. Consider adding eggs for breakfast protein."
 }`;
 
     const userPrompt = `Create a daily meal plan for me.
@@ -1320,18 +1315,19 @@ MY NUTRITIONAL GOALS:
 - Fat: ${goalData.fat_total}g
 - Fiber: ${goalData.fiber}g
 
-MY INVENTORY (available food items):
+${body.budget ? `MY BUDGET: ${body.budget} BDT (stay within this limit)` : ""}
+
+MY INVENTORY (available food items with prices):
 ${JSON.stringify(foodItemsData, null, 2)}
 
 ${body.preferences ? `PREFERENCES: ${body.preferences}` : ""}
 
 Please create a meal plan with ${
       body.mealCount || 3
-    } meals that uses these foods and meets my goals.`;
+    } meal entries. Include appropriate meal times throughout the day. Calculate prices based on the price_per_unit_bdt field.`;
 
     // Generate meal plan using Gemini AI
     try {
-      const { GoogleGenAI } = await import("@google/genai");
       const ai = new GoogleGenAI({});
 
       const aiResponse = await ai.models.generateContent({
@@ -1358,21 +1354,35 @@ Please create a meal plan with ${
         });
       }
 
+      // Validate meal plan structure
+      if (!mealPlan.items || !Array.isArray(mealPlan.items)) {
+        return res.status(500).json({
+          message: "Failed to generate valid meal plan structure",
+          error: "AI response missing items array",
+        });
+      }
+
       // Save meal plan to user's database
       user.ai_meal_plan = {
-        meals: mealPlan.meals,
-        dailyTotals: mealPlan.dailyTotals,
-        goalComparison: mealPlan.goalComparison,
+        items: mealPlan.items,
+        totalPrice: mealPlan.totalPrice || 0,
         generatedAt: new Date(),
         preferences: body.preferences,
+        budget: body.budget,
+        suggestions: mealPlan.suggestions,
       } as any;
 
       await user.save();
 
       return res.status(200).json({
         message: "Meal plan generated and saved successfully",
-        mealPlan,
+        mealPlan: {
+          items: mealPlan.items,
+          totalPrice: mealPlan.totalPrice,
+          suggestions: mealPlan.suggestions,
+        },
         goal: goalData,
+        budget: body.budget,
         inventoryItemCount: foodItemsData.length,
       });
     } catch (aiError) {

@@ -117,7 +117,7 @@ curl -X POST http://localhost:3000/analytics/monthly \
 
 ### 2. POST `/analytics/weekly`
 
-Get food logs for 7 consecutive days starting from a specific date.
+Get food logs for 7 consecutive days with AI-generated insights and suggestions.
 
 **Authentication:** Required
 
@@ -140,6 +140,13 @@ Get food logs for 7 consecutive days starting from a specific date.
   "message": "Weekly food logs",
   "startDate": "2024-11-15",
   "endDate": "2024-11-21",
+  "currentGoal": {
+    "calories": 2000,
+    "protein": 150,
+    "carbohydrate": 200,
+    "fat_total": 60,
+    "fiber": 30
+  },
   "dailyLogs": [
     {
       "date": "2024-11-15",
@@ -162,20 +169,36 @@ Get food logs for 7 consecutive days starting from a specific date.
         }
       ],
       "summary": {
-        "calories": 389,
-        "protein": 16.9,
-        "carbohydrate": 66.3,
-        "fat_total": 6.9,
-        "fiber": 10.6,
-        "sodium": 0,
-        "cholesterol": 0,
-        "potassium": 0,
-        "vitamin_a": 0,
-        "vitamin_c": 0,
-        "vitamin_d": 0,
-        "calcium": 0,
-        "iron": 0,
-        "magnesium": 0
+        "calories": 1850,
+        "protein": 145,
+        "carbohydrate": 195,
+        "fat_total": 58,
+        "fiber": 28,
+        "sodium": 2100,
+        "cholesterol": 150,
+        "potassium": 3200,
+        "vitamin_a": 850,
+        "vitamin_c": 85,
+        "vitamin_d": 14,
+        "calcium": 950,
+        "iron": 16,
+        "magnesium": 380
+      },
+      "result_percentage": {
+        "calories": 92.5,
+        "protein": 96.7,
+        "carbohydrate": 97.5,
+        "fat_total": 96.7,
+        "fiber": 93.3,
+        "sodium": 100,
+        "cholesterol": 100,
+        "potassium": 91.4,
+        "vitamin_a": 94.4,
+        "vitamin_c": 94.4,
+        "vitamin_d": 93.3,
+        "calcium": 95.0,
+        "iron": 88.9,
+        "magnesium": 95.0
       }
     },
     {
@@ -183,24 +206,89 @@ Get food logs for 7 consecutive days starting from a specific date.
       "dayOfWeek": "Saturday",
       "logs": [],
       "summary": {
-        "calories": 0,
-        "protein": 0,
-        "carbohydrate": 0,
-        "fat_total": 0,
-        "fiber": 0,
-        "sodium": 0,
-        "cholesterol": 0,
-        "potassium": 0,
-        "vitamin_a": 0,
-        "vitamin_c": 0,
-        "vitamin_d": 0,
-        "calcium": 0,
-        "iron": 0,
-        "magnesium": 0
+        "calories": 2100,
+        "protein": 158,
+        "carbohydrate": 210,
+        "fat_total": 62,
+        "fiber": 31,
+        "sodium": 2200,
+        "cholesterol": 160,
+        "potassium": 3400,
+        "vitamin_a": 880,
+        "vitamin_c": 88,
+        "vitamin_d": 15,
+        "calcium": 980,
+        "iron": 17,
+        "magnesium": 395
+      },
+      "result_percentage": {
+        "calories": 105.0,
+        "protein": 105.3,
+        "carbohydrate": 105.0,
+        "fat_total": 103.3,
+        "fiber": 103.3,
+        "sodium": 104.8,
+        "cholesterol": 106.7,
+        "potassium": 97.1,
+        "vitamin_a": 97.8,
+        "vitamin_c": 97.8,
+        "vitamin_d": 100.0,
+        "calcium": 98.0,
+        "iron": 94.4,
+        "magnesium": 98.8
       }
     }
     // ... continues for 7 days total
-  ]
+  ],
+  "weeklyTotals": {
+    "calories": 13580,
+    "protein": 1050,
+    "carbohydrate": 1395,
+    "fat_total": 415,
+    "fiber": 205,
+    "sodium": 14700,
+    "cholesterol": 1050,
+    "potassium": 22400,
+    "vitamin_a": 5950,
+    "vitamin_c": 595,
+    "vitamin_d": 98,
+    "calcium": 6650,
+    "iron": 112,
+    "magnesium": 2660
+  },
+  "weeklyAverages": {
+    "calories": 1940,
+    "protein": 150,
+    "carbohydrate": 199.3,
+    "fat_total": 59.3,
+    "fiber": 29.3,
+    "sodium": 2100,
+    "cholesterol": 150,
+    "potassium": 3200,
+    "vitamin_a": 850,
+    "vitamin_c": 85,
+    "vitamin_d": 14,
+    "calcium": 950,
+    "iron": 16,
+    "magnesium": 380
+  },
+  "weeklyAveragePercentages": {
+    "calories": 97.0,
+    "protein": 100.0,
+    "carbohydrate": 99.7,
+    "fat_total": 98.8,
+    "fiber": 97.7,
+    "sodium": 100.0,
+    "cholesterol": 100.0,
+    "potassium": 91.4,
+    "vitamin_a": 94.4,
+    "vitamin_c": 94.4,
+    "vitamin_d": 93.3,
+    "calcium": 95.0,
+    "iron": 88.9,
+    "magnesium": 95.0
+  },
+  "aiSuggestions": "## Weekly Nutrition Analysis\n\n### 1. General Consumption Trend\n\n**Overall Pattern**: Your weekly consumption shows good consistency with an average of 1940 kcal per day (97% of your goal). You're maintaining steady intake throughout the week with only minor variations.\n\n**What to Improve**:\n- Increase calorie intake slightly to meet your 2000 kcal target more consistently\n- Aim for more uniform daily intake to avoid under-eating days\n\n### 2. Over/Under Consumption Detection\n\n**Under-consuming**:\n- ⚠️ **Iron** (88.9% of goal): Consistently below target. Add more red meat, spinach, or fortified cereals\n- ⚠️ **Vitamin D** (93.3% of goal): Slightly low. Consider fatty fish, egg yolks, or supplementation\n- ⚠️ **Vitamin C** (94.4% of goal): Add more citrus fruits, bell peppers, or tomatoes\n\n**Well-balanced**:\n- ✅ **Protein** (100% of goal): Excellent protein intake\n- ✅ **Carbohydrates** (99.7% of goal): Nearly perfect\n- ✅ **Fiber** (97.7% of goal): Good fiber intake\n\n### 3. Nutritional Imbalances & Suggestions\n\n**Macro Balance**: Your macronutrient ratios are well-balanced with no major concerns. Protein-to-carb ratio is healthy.\n\n**Key Recommendations**:\n\n1. **Boost Iron Intake**: \n   - Add 1-2 servings of red meat or dark leafy greens per week\n   - Pair iron-rich foods with vitamin C for better absorption\n\n2. **Improve Micronutrient Variety**:\n   - Include more colorful vegetables for better vitamin coverage\n   - Consider a vitamin D supplement, especially if sun exposure is limited\n\n3. **Maintain Current Habits**:\n   - Your protein and fiber intake are excellent - keep it up!\n   - Calorie consistency is good, just slightly increase portion sizes\n\n**Action Items for Next Week**:\n- Add spinach or kale to 2-3 meals\n- Include citrus fruit daily (oranges, grapefruit)\n- Consider fortified foods or supplements for vitamin D\n- Increase portion sizes slightly to reach 2000 kcal target"
 }
 ```
 
@@ -208,9 +296,18 @@ Get food logs for 7 consecutive days starting from a specific date.
 
 - Returns data for **exactly 7 consecutive days** starting from `startDate`
 - Includes day of the week name (Sunday, Monday, etc.)
+- Calculates **result percentages** for each day based on user's goal
+- Computes **weekly totals** and **weekly averages**
+- Generates **AI-powered suggestions** analyzing consumption trends
 - Days with no food logs will have empty `logs` array and zero `summary` values
 - Food items are fully populated with all nutritional data
 - Summary calculates total nutrition for that specific day
+
+**AI Suggestions Include:**
+
+1. **General Consumption Trend**: Overall patterns and consistency analysis
+2. **Over/Under Consumption**: Specific nutrients above or below targets
+3. **Nutritional Imbalances**: Macro/micro nutrient ratio issues with actionable suggestions
 
 **Example:**
 
@@ -350,7 +447,7 @@ const getMonthlyLogs = async (year, month) => {
 await getMonthlyLogs(2024, 11);
 ```
 
-#### Weekly Food Logs
+#### Weekly Food Logs with AI Insights
 
 ```javascript
 const getWeeklyLogs = async (startDate) => {
@@ -363,13 +460,26 @@ const getWeeklyLogs = async (startDate) => {
 
   const data = await response.json();
 
-  // Process weekly logs
+  // Display weekly summary
+  console.log("=== Weekly Summary ===");
+  console.log(`Average Calories: ${data.weeklyAverages.calories.toFixed(0)} kcal`);
+  console.log(`Average Protein: ${data.weeklyAverages.protein.toFixed(1)}g`);
+  console.log("");
+
+  // Display daily breakdown
+  console.log("=== Daily Breakdown ===");
   data.dailyLogs.forEach((day) => {
-    console.log(`${day.dayOfWeek} - ${day.date}`);
-    console.log(`Calories: ${day.summary.calories}`);
-    console.log(`Protein: ${day.summary.protein}g`);
-    console.log("---");
+    console.log(`${day.dayOfWeek} (${day.date}):`);
+    console.log(`  Calories: ${day.summary.calories.toFixed(0)} (${day.result_percentage.calories.toFixed(1)}%)`);
+    console.log(`  Protein: ${day.summary.protein.toFixed(1)}g (${day.result_percentage.protein.toFixed(1)}%)`);
   });
+  console.log("");
+
+  // Display AI suggestions
+  if (data.aiSuggestions) {
+    console.log("=== AI Nutritionist Insights ===");
+    console.log(data.aiSuggestions);
+  }
 
   return data;
 };
@@ -402,29 +512,37 @@ const avgCalories =
 console.log(`Average daily calories: ${avgCalories.toFixed(0)}`);
 ```
 
-### 2. Weekly Progress Review
+### 2. Weekly Progress Review with AI Guidance
 
-Review week's progress for accountability:
+Review week's progress with personalized AI insights:
 
 ```javascript
 const data = await getWeeklyLogs("2024-11-15");
 
-// Display weekly summary
-const weeklyTotal = data.dailyLogs.reduce(
-  (sum, day) => sum + day.summary.calories,
-  0
-);
-const weeklyAvg = weeklyTotal / 7;
+// Display weekly summary with percentages
+console.log(`Weekly Average Calories: ${data.weeklyAverages.calories.toFixed(0)} (${data.weeklyAveragePercentages.calories.toFixed(1)}% of goal)`);
+console.log(`Weekly Average Protein: ${data.weeklyAverages.protein.toFixed(1)}g (${data.weeklyAveragePercentages.protein.toFixed(1)}% of goal)`);
 
-console.log(`Weekly Total: ${weeklyTotal} calories`);
-console.log(`Daily Average: ${weeklyAvg.toFixed(0)} calories`);
+// Identify problem areas
+const underConsuming = [];
+const overConsuming = [];
 
-// Find best and worst days
-const sorted = [...data.dailyLogs].sort(
-  (a, b) => b.summary.calories - a.summary.calories
-);
-console.log(`Highest: ${sorted[0].dayOfWeek} - ${sorted[0].summary.calories}`);
-console.log(`Lowest: ${sorted[6].dayOfWeek} - ${sorted[6].summary.calories}`);
+for (const [nutrient, percentage] of Object.entries(data.weeklyAveragePercentages)) {
+  if (percentage < 90) {
+    underConsuming.push({ nutrient, percentage });
+  } else if (percentage > 110) {
+    overConsuming.push({ nutrient, percentage });
+  }
+}
+
+console.log("\nNutrients to Increase:", underConsuming);
+console.log("Nutrients to Reduce:", overConsuming);
+
+// Display AI suggestions (markdown format)
+if (data.aiSuggestions) {
+  console.log("\n📊 AI Nutritionist Analysis:\n");
+  console.log(data.aiSuggestions);
+}
 ```
 
 ### 3. Building Charts/Graphs
@@ -592,14 +710,16 @@ if (cached && isToday) {
 
 ## Comparison with Single Day Analytics
 
-| Feature             | Single Day  | Weekly      | Monthly     |
-| ------------------- | ----------- | ----------- | ----------- |
-| Endpoint            | GET         | POST        | POST        |
-| Days returned       | 1           | 7           | 28-31       |
-| Includes percentage | ✅ Yes      | ❌ No       | ❌ No       |
-| Includes goals      | ✅ Yes      | ❌ No       | ❌ No       |
-| Day of week         | ❌ No       | ✅ Yes      | ❌ No       |
-| Use case            | Daily check | Week review | Month stats |
+| Feature             | Single Day  | Weekly          | Monthly     |
+| ------------------- | ----------- | --------------- | ----------- |
+| Endpoint            | GET         | POST            | POST        |
+| Days returned       | 1           | 7               | 28-31       |
+| Includes percentage | ✅ Yes      | ✅ Yes (Daily)  | ❌ No       |
+| Includes goals      | ✅ Yes      | ✅ Yes          | ❌ No       |
+| Weekly averages     | ❌ No       | ✅ Yes          | ❌ No       |
+| AI suggestions      | ❌ No       | ✅ Yes          | ❌ No       |
+| Day of week         | ❌ No       | ✅ Yes          | ❌ No       |
+| Use case            | Daily check | Week analysis   | Month stats |
 
 ---
 

@@ -44,39 +44,20 @@ export interface IChatSession {
   updatedAt: Date;
 }
 
+export interface IAIMealPlanItem {
+  foodItemName: string;
+  quantity: number;
+  price: number;
+  time_to_eat: string; // Format: hh:mma (e.g., "08:30am", "12:00pm")
+}
+
 export interface IAIGeneratedMealPlan {
-  meals: Array<{
-    name: string;
-    items: Array<{
-      foodItemId: string;
-      foodItemName: string;
-      quantity: number;
-      servingUnit: string;
-    }>;
-    totals: {
-      calories: number;
-      protein: number;
-      carbohydrate: number;
-      fat_total: number;
-      fiber: number;
-    };
-  }>;
-  dailyTotals: {
-    calories: number;
-    protein: number;
-    carbohydrate: number;
-    fat_total: number;
-    fiber: number;
-  };
-  goalComparison: {
-    caloriesDiff: number;
-    proteinDiff: number;
-    carbsDiff: number;
-    fatDiff: number;
-    fiberDiff: number;
-  };
+  items: IAIMealPlanItem[];
+  totalPrice: number;
   generatedAt: Date;
   preferences?: string;
+  budget?: number;
+  suggestions?: string;
 }
 
 export interface IUser extends Document {
@@ -197,42 +178,19 @@ const UserSchema: Schema<IUser> = new Schema(
     },
     ai_meal_plan: {
       type: {
-        meals: [
+        items: [
           {
-            name: { type: String, required: true },
-            items: [
-              {
-                foodItemId: { type: String, required: true },
-                foodItemName: { type: String, required: true },
-                quantity: { type: Number, required: true },
-                servingUnit: { type: String, required: true },
-              },
-            ],
-            totals: {
-              calories: { type: Number, required: true },
-              protein: { type: Number, required: true },
-              carbohydrate: { type: Number, required: true },
-              fat_total: { type: Number, required: true },
-              fiber: { type: Number, required: true },
-            },
+            foodItemName: { type: String, required: true },
+            quantity: { type: Number, required: true },
+            price: { type: Number, required: true },
+            time_to_eat: { type: String, required: true },
           },
         ],
-        dailyTotals: {
-          calories: { type: Number, required: true },
-          protein: { type: Number, required: true },
-          carbohydrate: { type: Number, required: true },
-          fat_total: { type: Number, required: true },
-          fiber: { type: Number, required: true },
-        },
-        goalComparison: {
-          caloriesDiff: { type: Number, required: true },
-          proteinDiff: { type: Number, required: true },
-          carbsDiff: { type: Number, required: true },
-          fatDiff: { type: Number, required: true },
-          fiberDiff: { type: Number, required: true },
-        },
+        totalPrice: { type: Number, required: true },
         generatedAt: { type: Date, default: Date.now },
         preferences: { type: String },
+        budget: { type: Number },
+        suggestions: { type: String },
       },
       required: false,
     },
