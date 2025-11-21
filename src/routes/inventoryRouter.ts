@@ -4,7 +4,6 @@ import {
   getInventory,
   removeItemFromInventory,
   updateInventory,
-  createInventory,
 } from "../controllers/inventoryController";
 import { authMiddleware } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
@@ -16,9 +15,6 @@ import {
 const router = Router();
 
 router.use(authMiddleware);
-
-// POST /inventories/create - Create inventory with User_Submission items
-router.post("/create", createInventory);
 
 // GET /inventories - Get user's inventory
 router.get("/", getInventory);

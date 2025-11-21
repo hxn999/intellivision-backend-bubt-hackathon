@@ -48,10 +48,17 @@ export const register = async (req: Request, res: Response) => {
       password: hashedPassword,
     });
 
-    // Create default inventory for the user
+    // Find all food items with source "User_Submission"
+    const { FoodItem } = await import("../models/FoodItem");
+    const userSubmissionFoodItems = await FoodItem.find({
+      source: "User_Submission",
+    });
+
+    // Create default inventory for the user with User_Submission items
     const inventory = await FoodInventory.create({
-      name: "My Inventory",
+      name: `${user.fullName}'s Inventory`,
       user: user._id,
+      foodItems: userSubmissionFoodItems.map((item) => item._id),
     });
 
     // Update user with inventory reference
