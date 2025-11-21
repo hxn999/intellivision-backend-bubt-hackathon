@@ -11,6 +11,10 @@ import {
 } from "../validation/userSchemas";
 import { bmr } from "../lib/utils/metrics";
 import cloudinary from "../config/cloudinary";
+import { GoogleGenAI } from "@google/genai";
+
+import dotenv from "dotenv";
+dotenv.config();
 
 export const getUser = async (req: Request, res: Response) => {
   try {
@@ -508,12 +512,12 @@ export const uploadAIInventoryLog = async (req: Request, res: Response) => {
 
       // Call OCR API
       const ocrResponse = await fetch(
-        `https://api.ocr.space/parse/image?apikey=${ocrApiKey}&url=${encodeURIComponent(
+        `https://api.ocr.space/parse/ImageUrl?apikey=${ocrApiKey}&url=${encodeURIComponent(
           result.secure_url
         )}`
       );
       const ocrData = await ocrResponse.json();
-
+        console.log(ocrData);
       // Extract all parsed text
       let allParsedText = "";
       if (ocrData.ParsedResults && Array.isArray(ocrData.ParsedResults)) {
@@ -522,7 +526,6 @@ export const uploadAIInventoryLog = async (req: Request, res: Response) => {
         ).join("\n");
       }
 
-      console.log(allParsedText)
       if (!allParsedText.trim()) {
         return res.status(200).json({
           message:
@@ -534,8 +537,9 @@ export const uploadAIInventoryLog = async (req: Request, res: Response) => {
       }
 
       // Use Gemini AI to generate food item JSON
-      const { GoogleGenAI } = await import("@google/genai");
-      const ai = new GoogleGenAI({});
+      const ai = new GoogleGenAI({
+          apiKey: "AIzaSyCii03U9Q6BYR3zJsJbS7uE2lokcBnEcus",
+      });
 
       const systemInstruction = `You are a food inventory assistant. Given OCR text from a food product image, extract and return ONLY a valid JSON object (no markdown, no backticks, no formatting) with this exact structure:
 {
@@ -560,15 +564,16 @@ export const uploadAIInventoryLog = async (req: Request, res: Response) => {
 If you cannot extract accurate nutritional information, provide reasonable estimates. Return ONLY the JSON object, nothing else.`;
 
       const aiResponse = await ai.models.generateContent({
-        model: "gemini-2.0-flash-exp",
+        model: "gemini-2.0-flash",
         contents: `OCR Text from food product:\n\n${allParsedText}`,
         config: {
           systemInstruction: systemInstruction,
         },
       });
 
-      const generatedText = (aiResponse.text || "").trim();
+      const generatedText = (aiResponse.text || "").trim().replace(/```json|```/g, "").trim();
 
+      // console.log("Generated AI JSON:", generatedText);
       // Parse the JSON response
       let foodItemData;
       try {
