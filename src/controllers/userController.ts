@@ -856,6 +856,238 @@ export const deleteMealPlanItem = async (req: Request, res: Response) => {
   }
 };
 
+// Chat Sessions
+export const getChatSessions = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      chatSessions: user.chatSessions || [],
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const createChatSession = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const body =
+      req.body as import("../validation/userSchemas").CreateChatSessionInput;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const mongoose = (await import("mongoose")).default;
+    const newSession = {
+      _id: new mongoose.Types.ObjectId().toString(),
+      title: body.title,
+      systemInstruction: body.systemInstruction,
+      messages: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    if (!user.chatSessions) {
+      user.chatSessions = [];
+    }
+
+    user.chatSessions.push(newSession as any);
+    await user.save();
+
+    return res.status(201).json({
+      message: "Chat session created",
+      chatSession: newSession,
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getChatSession = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { sessionId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const session = user.chatSessions?.find((s: any) => s._id === sessionId);
+    if (!session) {
+      return res.status(404).json({ message: "Chat session not found" });
+    }
+
+    return res.status(200).json({
+      chatSession: session,
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const sendChatMessage = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { sessionId } = req.params;
+    const body =
+      req.body as import("../validation/userSchemas").SendChatMessageInput;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const sessionIndex = user.chatSessions?.findIndex(
+      (s: any) => s._id === sessionId
+    );
+    if (
+      sessionIndex === undefined ||
+      sessionIndex === -1 ||
+      !user.chatSessions
+    ) {
+      return res.status(404).json({ message: "Chat session not found" });
+    }
+
+    const session = user.chatSessions[sessionIndex] as any;
+
+    // Add user message
+    const userMessage = {
+      role: "user" as const,
+      content: body.message,
+      timestamp: new Date(),
+    };
+    session.messages.push(userMessage);
+
+    // Build conversation history for AI
+    const conversationHistory = session.messages
+      .map(
+        (msg: any) =>
+          `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`
+      )
+      .join("\n\n");
+
+    const fullPrompt = `${conversationHistory}\n\nAssistant:`;
+
+    // Generate AI response using Gemini
+    try {
+      const { GoogleGenAI } = await import("@google/genai");
+      const ai = new GoogleGenAI({});
+
+      const config = session.systemInstruction
+        ? { systemInstruction: session.systemInstruction }
+        : {};
+
+      const aiResponse = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: fullPrompt,
+        config: config,
+      });
+
+      const aiText = (aiResponse.text || "").trim();
+
+      // Add AI message
+      const aiMessage = {
+        role: "assistant" as const,
+        content: aiText,
+        timestamp: new Date(),
+      };
+      session.messages.push(aiMessage);
+
+      // Update session timestamp
+      session.updatedAt = new Date();
+
+      await user.save();
+
+      return res.status(200).json({
+        message: "Message sent",
+        userMessage,
+        aiMessage,
+        chatSession: session,
+      });
+    } catch (aiError) {
+      // eslint-disable-next-line no-console
+      console.error("AI error:", aiError);
+      return res.status(500).json({
+        message: "Failed to generate AI response",
+        error: aiError instanceof Error ? aiError.message : "Unknown error",
+      });
+    }
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const deleteChatSession = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { sessionId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const sessionIndex = user.chatSessions?.findIndex(
+      (s: any) => s._id === sessionId
+    );
+    if (
+      sessionIndex === undefined ||
+      sessionIndex === -1 ||
+      !user.chatSessions
+    ) {
+      return res.status(404).json({ message: "Chat session not found" });
+    }
+
+    const [deleted] = user.chatSessions.splice(sessionIndex, 1);
+    await user.save();
+
+    return res.status(200).json({
+      message: "Chat session deleted",
+      deleted,
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 export const uploadProfileImage = async (req: Request, res: Response) => {
   try {
     const userId = req.userId;

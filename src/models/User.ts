@@ -29,6 +29,21 @@ export interface IMealPlanItem {
   foodItem: Types.ObjectId;
 }
 
+export interface IChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+}
+
+export interface IChatSession {
+  _id: string;
+  title: string;
+  systemInstruction?: string;
+  messages: IChatMessage[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface IUser extends Document {
   fullName: string;
   email: string;
@@ -42,6 +57,7 @@ export interface IUser extends Document {
   ai_generated_inventory_logs?: IAIImageLog[];
   ai_generated_food_logs?: IAIImageLog[];
   meal_plan?: IMealPlanItem[];
+  chatSessions?: IChatSession[];
 }
 
 const UserSchema: Schema<IUser> = new Schema(
@@ -116,6 +132,29 @@ const UserSchema: Schema<IUser> = new Schema(
             ref: "FoodItem",
             required: true,
           },
+        },
+      ],
+      default: [],
+    },
+    chatSessions: {
+      type: [
+        {
+          _id: { type: String, required: true },
+          title: { type: String, required: true },
+          systemInstruction: { type: String },
+          messages: [
+            {
+              role: {
+                type: String,
+                enum: ["user", "assistant"],
+                required: true,
+              },
+              content: { type: String, required: true },
+              timestamp: { type: Date, default: Date.now },
+            },
+          ],
+          createdAt: { type: Date, default: Date.now },
+          updatedAt: { type: Date, default: Date.now },
         },
       ],
       default: [],

@@ -18,13 +18,20 @@ import {
   getMealPlan,
   addMealPlanItem,
   deleteMealPlanItem,
+  getChatSessions,
+  createChatSession,
+  getChatSession,
+  sendChatMessage,
+  deleteChatSession,
 } from "../controllers/userController";
 import { authMiddleware } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
 import {
   addFoodLogSchema,
   addMealPlanItemSchema,
+  createChatSessionSchema,
   createGoalSchema,
+  sendChatMessageSchema,
   setCurrentGoalSchema,
   updateGoalSchema,
   updateHealthProfileSchema,
@@ -101,5 +108,29 @@ router.post("/meal-plan", validateBody(addMealPlanItemSchema), addMealPlanItem);
 
 // DELETE /user/meal-plan/:index
 router.delete("/meal-plan/:index", deleteMealPlanItem);
+
+// Chat Sessions
+// GET /user/chat-sessions - Get all chat sessions
+router.get("/chat-sessions", getChatSessions);
+
+// POST /user/chat-sessions - Create new chat session
+router.post(
+  "/chat-sessions",
+  validateBody(createChatSessionSchema),
+  createChatSession
+);
+
+// GET /user/chat-sessions/:sessionId - Get specific chat session
+router.get("/chat-sessions/:sessionId", getChatSession);
+
+// POST /user/chat-sessions/:sessionId/message - Send message in session
+router.post(
+  "/chat-sessions/:sessionId/message",
+  validateBody(sendChatMessageSchema),
+  sendChatMessage
+);
+
+// DELETE /user/chat-sessions/:sessionId - Delete chat session
+router.delete("/chat-sessions/:sessionId", deleteChatSession);
 
 export default router;

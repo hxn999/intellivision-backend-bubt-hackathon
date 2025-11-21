@@ -112,3 +112,16 @@ export const addMealPlanItemSchema = z.object({
 });
 
 export type AddMealPlanItemInput = z.infer<typeof addMealPlanItemSchema>;
+
+export const createChatSessionSchema = z.object({
+  title: z.string().min(1),
+  systemInstruction: z.string().optional(),
+});
+
+export type CreateChatSessionInput = z.infer<typeof createChatSessionSchema>;
+
+export const sendChatMessageSchema = z.object({
+  message: z.string().min(1),
+});
+
+export type SendChatMessageInput = z.infer<typeof sendChatMessageSchema>;
