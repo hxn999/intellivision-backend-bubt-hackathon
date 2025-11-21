@@ -44,6 +44,41 @@ export interface IChatSession {
   updatedAt: Date;
 }
 
+export interface IAIGeneratedMealPlan {
+  meals: Array<{
+    name: string;
+    items: Array<{
+      foodItemId: string;
+      foodItemName: string;
+      quantity: number;
+      servingUnit: string;
+    }>;
+    totals: {
+      calories: number;
+      protein: number;
+      carbohydrate: number;
+      fat_total: number;
+      fiber: number;
+    };
+  }>;
+  dailyTotals: {
+    calories: number;
+    protein: number;
+    carbohydrate: number;
+    fat_total: number;
+    fiber: number;
+  };
+  goalComparison: {
+    caloriesDiff: number;
+    proteinDiff: number;
+    carbsDiff: number;
+    fatDiff: number;
+    fiberDiff: number;
+  };
+  generatedAt: Date;
+  preferences?: string;
+}
+
 export interface IUser extends Document {
   fullName: string;
   email: string;
@@ -58,6 +93,7 @@ export interface IUser extends Document {
   ai_generated_food_logs?: IAIImageLog[];
   meal_plan?: IMealPlanItem[];
   chatSessions?: IChatSession[];
+  ai_meal_plan?: IAIGeneratedMealPlan;
 }
 
 const UserSchema: Schema<IUser> = new Schema(
@@ -158,6 +194,47 @@ const UserSchema: Schema<IUser> = new Schema(
         },
       ],
       default: [],
+    },
+    ai_meal_plan: {
+      type: {
+        meals: [
+          {
+            name: { type: String, required: true },
+            items: [
+              {
+                foodItemId: { type: String, required: true },
+                foodItemName: { type: String, required: true },
+                quantity: { type: Number, required: true },
+                servingUnit: { type: String, required: true },
+              },
+            ],
+            totals: {
+              calories: { type: Number, required: true },
+              protein: { type: Number, required: true },
+              carbohydrate: { type: Number, required: true },
+              fat_total: { type: Number, required: true },
+              fiber: { type: Number, required: true },
+            },
+          },
+        ],
+        dailyTotals: {
+          calories: { type: Number, required: true },
+          protein: { type: Number, required: true },
+          carbohydrate: { type: Number, required: true },
+          fat_total: { type: Number, required: true },
+          fiber: { type: Number, required: true },
+        },
+        goalComparison: {
+          caloriesDiff: { type: Number, required: true },
+          proteinDiff: { type: Number, required: true },
+          carbsDiff: { type: Number, required: true },
+          fatDiff: { type: Number, required: true },
+          fiberDiff: { type: Number, required: true },
+        },
+        generatedAt: { type: Date, default: Date.now },
+        preferences: { type: String },
+      },
+      required: false,
     },
   },
   {

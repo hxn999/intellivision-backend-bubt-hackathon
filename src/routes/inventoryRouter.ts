@@ -5,6 +5,7 @@ import {
   removeItemFromInventory,
   updateInventory,
 } from "../controllers/inventoryController";
+import { checkInventoryExpiration } from "../controllers/inventoryExpirationController";
 import { authMiddleware } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
 import {
@@ -27,5 +28,8 @@ router.post("/items", validateBody(addInventoryItemSchema), addItemToInventory);
 
 // DELETE /inventory/items/:foodItemId - Remove item from inventory
 router.delete("/items/:foodItemId", removeItemFromInventory);
+
+// GET /inventory/expiration-check - Check food expiration status
+router.get("/expiration-check", checkInventoryExpiration);
 
 export default router;

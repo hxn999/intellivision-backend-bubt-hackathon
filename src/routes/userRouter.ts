@@ -23,6 +23,8 @@ import {
   getChatSession,
   sendChatMessage,
   deleteChatSession,
+  generateAIMealPlan,
+  getSavedMealPlan,
 } from "../controllers/userController";
 import { authMiddleware } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
@@ -31,6 +33,7 @@ import {
   addMealPlanItemSchema,
   createChatSessionSchema,
   createGoalSchema,
+  generateMealPlanSchema,
   sendChatMessageSchema,
   setCurrentGoalSchema,
   updateGoalSchema,
@@ -132,5 +135,16 @@ router.post(
 
 // DELETE /user/chat-sessions/:sessionId - Delete chat session
 router.delete("/chat-sessions/:sessionId", deleteChatSession);
+
+// AI Meal Plan Generator
+// POST /user/generate-meal-plan - Generate AI meal plan from inventory and goals
+router.post(
+  "/generate-meal-plan",
+  validateBody(generateMealPlanSchema),
+  generateAIMealPlan
+);
+
+// GET /user/saved-meal-plan - Get saved AI meal plan
+router.get("/saved-meal-plan", getSavedMealPlan);
 
 export default router;

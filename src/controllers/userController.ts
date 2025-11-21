@@ -482,7 +482,9 @@ export const uploadAIInventoryLog = async (req: Request, res: Response) => {
     const cloudinary = (await import("../config/cloudinary")).default;
 
     // Convert buffer to base64 data URI for Cloudinary upload
-    const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    const base64Image = `data:${
+      req.file.mimetype
+    };base64,${req.file.buffer.toString("base64")}`;
 
     const result = await cloudinary.uploader.upload(base64Image, {
       folder: "ai_inventory_logs",
@@ -518,7 +520,7 @@ export const uploadAIInventoryLog = async (req: Request, res: Response) => {
       );
       const ocrData = await ocrResponse.json();
 
-      console.log(ocrData)
+      console.log(ocrData);
 
       // Extract all parsed text
       let allParsedText = "";
@@ -540,7 +542,7 @@ export const uploadAIInventoryLog = async (req: Request, res: Response) => {
 
       // Use Gemini AI to generate food item JSON
       const ai = new GoogleGenAI({
-          apiKey: "AIzaSyCii03U9Q6BYR3zJsJbS7uE2lokcBnEcus",
+        apiKey: "AIzaSyCii03U9Q6BYR3zJsJbS7uE2lokcBnEcus",
       });
 
       const systemInstruction = `You are a food inventory assistant. Given OCR text from a food product image, extract and return ONLY a valid JSON object (no markdown, no backticks, no formatting) with this exact structure:
@@ -573,7 +575,10 @@ If you cannot extract accurate nutritional information, provide reasonable estim
         },
       });
 
-      const generatedText = (aiResponse.text || "").trim().replace(/```json|```/g, "").trim();
+      const generatedText = (aiResponse.text || "")
+        .trim()
+        .replace(/```json|```/g, "")
+        .trim();
 
       // console.log("Generated AI JSON:", generatedText);
       // Parse the JSON response
@@ -682,7 +687,9 @@ export const uploadAIFoodLog = async (req: Request, res: Response) => {
     const cloudinary = (await import("../config/cloudinary")).default;
 
     // Convert buffer to base64 data URI for Cloudinary upload
-    const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    const base64Image = `data:${
+      req.file.mimetype
+    };base64,${req.file.buffer.toString("base64")}`;
 
     const result = await cloudinary.uploader.upload(base64Image, {
       folder: "ai_food_logs",
@@ -1130,8 +1137,6 @@ export const uploadProfileImage = async (req: Request, res: Response) => {
       public_id: `user_${userId}_${Date.now()}`,
     });
 
-
-
     user.image_url = uploadResult.secure_url;
     await user.save();
 
@@ -1139,6 +1144,245 @@ export const uploadProfileImage = async (req: Request, res: Response) => {
       message: "Profile image updated successfully",
       image_url: user.image_url,
     });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Get Saved AI Meal Plan
+export const getSavedMealPlan = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.ai_meal_plan) {
+      return res.status(404).json({
+        message: "No saved meal plan found. Generate one first.",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Saved meal plan retrieved successfully",
+      mealPlan: user.ai_meal_plan,
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Generate AI Meal Plan
+export const generateAIMealPlan = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const body =
+      req.body as import("../validation/userSchemas").GenerateMealPlanInput;
+
+    // Fetch user with populated inventory and current goal
+    const user = await User.findById(userId).populate({
+      path: "inventory",
+      populate: {
+        path: "foodItems",
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if user has inventory
+    if (!user.inventory) {
+      return res.status(400).json({
+        message: "No inventory found. Please create an inventory first.",
+      });
+    }
+
+    // Get current goal
+    const currentGoal =
+      user.goals && user.goals.length > 0
+        ? user.goals[user.current_goal_index ?? 0]
+        : null;
+
+    if (!currentGoal) {
+      return res.status(400).json({
+        message: "No active goal found. Please create a goal first.",
+      });
+    }
+
+    // Get inventory items
+    const { FoodInventory } = await import("../models/FoodInventory");
+    const inventory = await FoodInventory.findById(user.inventory).populate(
+      "foodItems"
+    );
+
+    if (
+      !inventory ||
+      !inventory.foodItems ||
+      inventory.foodItems.length === 0
+    ) {
+      return res.status(400).json({
+        message: "Your inventory is empty. Please add food items first.",
+      });
+    }
+
+    // Prepare food items data for AI
+    const foodItemsData = inventory.foodItems.map((item: any) => ({
+      _id: item._id.toString(),
+      name: item.name,
+      description: item.description,
+      calories: item.calories,
+      protein: item.protein,
+      carbohydrate: item.carbohydrate,
+      fat_total: item.fat_total,
+      fiber: item.fiber,
+      serving_quantity: item.serving_quantity,
+      serving_unit: item.serving_unit,
+    }));
+
+    // Prepare goal data
+    const goalData = {
+      calories: currentGoal.calories,
+      protein: currentGoal.protein,
+      carbohydrate: currentGoal.carbohydrate,
+      fat_total: currentGoal.fat_total,
+      fiber: currentGoal.fiber,
+    };
+
+    // Create AI prompt
+    const systemInstruction = `You are a professional nutritionist and meal planner. Your task is to create a balanced daily meal plan using ONLY the food items provided in the user's inventory. The meal plan must meet the user's nutritional goals as closely as possible.
+
+IMPORTANT RULES:
+1. ONLY use food items from the provided inventory list
+2. Create exactly ${body.mealCount || 3} meals for the day
+3. Try to meet the nutritional goals (calories, protein, carbs, fats, fiber)
+4. Ensure meals are balanced and realistic
+5. Consider serving sizes and quantities
+6. Return ONLY valid JSON, no markdown formatting, no backticks, no extra text
+
+Response format (MUST be valid JSON):
+{
+  "meals": [
+    {
+      "name": "Breakfast",
+      "items": [
+        {
+          "foodItemId": "actual_id_from_inventory",
+          "foodItemName": "Food Name",
+          "quantity": 2,
+          "servingUnit": "serving unit"
+        }
+      ],
+      "totals": {
+        "calories": 500,
+        "protein": 25,
+        "carbohydrate": 60,
+        "fat_total": 15,
+        "fiber": 8
+      }
+    }
+  ],
+  "dailyTotals": {
+    "calories": 2000,
+    "protein": 150,
+    "carbohydrate": 200,
+    "fat_total": 60,
+    "fiber": 30
+  },
+  "goalComparison": {
+    "caloriesDiff": -100,
+    "proteinDiff": 10,
+    "carbsDiff": 20,
+    "fatDiff": -5,
+    "fiberDiff": 5
+  }
+}`;
+
+    const userPrompt = `Create a daily meal plan for me.
+
+MY NUTRITIONAL GOALS:
+- Calories: ${goalData.calories} kcal
+- Protein: ${goalData.protein}g
+- Carbohydrates: ${goalData.carbohydrate}g
+- Fat: ${goalData.fat_total}g
+- Fiber: ${goalData.fiber}g
+
+MY INVENTORY (available food items):
+${JSON.stringify(foodItemsData, null, 2)}
+
+${body.preferences ? `PREFERENCES: ${body.preferences}` : ""}
+
+Please create a meal plan with ${
+      body.mealCount || 3
+    } meals that uses these foods and meets my goals.`;
+
+    // Generate meal plan using Gemini AI
+    try {
+      const { GoogleGenAI } = await import("@google/genai");
+      const ai = new GoogleGenAI({});
+
+      const aiResponse = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: userPrompt,
+        config: { systemInstruction },
+      });
+
+      const responseText = (aiResponse.text ?? "")
+        .trim()
+        .replace(/```json|```/g, "")
+        .trim();
+
+      // Parse AI response
+      let mealPlan;
+      try {
+        mealPlan = JSON.parse(responseText);
+      } catch (parseError) {
+        // eslint-disable-next-line no-console
+        console.error("Failed to parse AI response:", responseText);
+        return res.status(500).json({
+          message: "Failed to generate valid meal plan",
+          error: "AI response was not valid JSON",
+        });
+      }
+
+      // Save meal plan to user's database
+      user.ai_meal_plan = {
+        meals: mealPlan.meals,
+        dailyTotals: mealPlan.dailyTotals,
+        goalComparison: mealPlan.goalComparison,
+        generatedAt: new Date(),
+        preferences: body.preferences,
+      } as any;
+
+      await user.save();
+
+      return res.status(200).json({
+        message: "Meal plan generated and saved successfully",
+        mealPlan,
+        goal: goalData,
+        inventoryItemCount: foodItemsData.length,
+      });
+    } catch (aiError) {
+      // eslint-disable-next-line no-console
+      console.error("AI error:", aiError);
+      return res.status(500).json({
+        message: "Failed to generate meal plan",
+        error: aiError instanceof Error ? aiError.message : "Unknown AI error",
+      });
+    }
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(error);

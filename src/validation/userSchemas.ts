@@ -125,3 +125,10 @@ export const sendChatMessageSchema = z.object({
 });
 
 export type SendChatMessageInput = z.infer<typeof sendChatMessageSchema>;
+
+export const generateMealPlanSchema = z.object({
+  preferences: z.string().optional(),
+  mealCount: z.number().int().min(1).max(10).optional().default(3),
+});
+
+export type GenerateMealPlanInput = z.infer<typeof generateMealPlanSchema>;
